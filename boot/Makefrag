@@ -1,0 +1,28 @@
+#
+# AlvOS 内核的 Makefile 片段.
+# 这不是一个完整的 makefile; 必须在 GNUmakefile 所在的最上级目录中运行 GNU make
+#
+
+OBJDIRS += boot
+
+BOOT_OBJS := $(OBJDIR)/boot/boot.o $(OBJDIR)/boot/main.o
+
+$(OBJDIR)/boot/%.o: boot/%.c
+	@echo + cc -Os $<
+	@mkdir -p $(@D)
+	$(V)$(CC) -nostdinc $(BOOT_CFLAGS) -Os -c -o $@ $<
+
+$(OBJDIR)/boot/%.o: boot/%.S
+	@echo + as $<
+	@mkdir -p $(@D)
+	$(V)$(CC) -nostdinc $(BOOT_CFLAGS) -c -o $@ $<
+
+# 将链接完成的 bootloader 加载到内核物理地址 0x7c00(BIOS 交接 CPU 控制权的地址)
+$(OBJDIR)/boot/boot: $(BOOT_OBJS)
+	@echo + ld $(OBJDIR)/boot/boot
+	$(V)$(LD) $(BOOT_LDFLAGS) -N -e start -Ttext 0x7c00 -o $@.out $^
+	$(V)$(OBJDUMP) -S $@.out >$@.asm
+	$(V)$(OBJCOPY) -S -O binary -j .text $@.out $@
+	$(V)perl boot/sign.pl $(OBJDIR)/boot/boot
+
+

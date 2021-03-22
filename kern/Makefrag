@@ -1,0 +1,96 @@
+#
+# AlvOS 内核的 Makefile 片段.
+# 这不是一个完整的 makefile; 必须在 GNUmakefile 所在的最上级目录中运行 GNU make
+#
+
+OBJDIRS += kern
+
+KERN_LDFLAGS := $(LDFLAGS) -T kern/kernel.ld -nostdlib --no-gc-sections --print-gc-sections -Map=vivek.map
+
+# entry.S 必须是第一个，这样它是文本段中的第一个代码！
+#
+# 为了避免不必要的代码重复，还从lib目录中使用了几个方便的源文件.
+KERN_SRCFILES :=	kern/entry.S \
+            kern/bootstrap.S \
+			kern/init.c \
+			kern/console.c \
+			kern/monitor.c \
+			kern/pmap.c \
+			kern/env.c \
+			kern/kclock.c \
+			kern/picirq.c \
+			kern/printf.c \
+			kern/trap.c \
+			kern/trapentry.S \
+			kern/sched.c \
+			kern/syscall.c \
+			kern/kdebug.c \
+			lib/printfmt.c \
+			lib/readline.c \
+			lib/string.c  \
+		    kern/libdwarf_rw.c \
+		    kern/libdwarf_frame.c \
+			kern/libdwarf_lineno.c \
+		    kern/elf_rw.c
+
+
+# 只 build 存在的文件.
+KERN_SRCFILES := $(wildcard $(KERN_SRCFILES))
+
+# 要嵌入内核的二进制程序映像.
+KERN_BINFILES := 
+
+KERN_OBJFILES := $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
+KERN_OBJFILES := $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))
+KERN_OBJFILES := $(patsubst $(OBJDIR)/lib/%, $(OBJDIR)/kern/%, $(KERN_OBJFILES))
+
+KERN_BINFILES := $(patsubst %, $(OBJDIR)/%, $(KERN_BINFILES))
+
+# 表明如何 build 内核目标文件
+$(OBJDIR)/kern/%.o: kern/%.c $(OBJDIR)/.vars.KERN_CFLAGS
+	@echo + cc $<
+	@mkdir -p $(@D)
+	$(V)$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
+
+# $(OBJDIR)/kern/bootstrap.o: kern/bootstrap.S $(OBJDIR)/.vars.BOOT_CFLAGS
+# 	@echo + as $<
+# 	@mkdir -p $(@D)
+# 	$(V)$(CC) -nostdinc $(BOOT_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/kern/%.o: kern/%.S $(OBJDIR)/.vars.KERN_CFLAGS
+	@echo + as $<
+	@mkdir -p $(@D)
+	$(V)$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
+
+$(OBJDIR)/kern/%.o: lib/%.c $(OBJDIR)/.vars.KERN_CFLAGS
+	@echo + cc $<
+	@mkdir -p $(@D)
+	$(V)$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
+
+# kern/init 的特殊标志
+$(OBJDIR)/kern/init.o: override KERN_CFLAGS+=$(INIT_CFLAGS)
+$(OBJDIR)/kern/init.o: $(OBJDIR)/.vars.INIT_CFLAGS
+
+# 表明如何 build 内核本身
+$(OBJDIR)/kern/kernel: $(KERN_OBJFILES) $(KERN_BINFILES) kern/kernel.ld \
+	  $(OBJDIR)/.vars.KERN_LDFLAGS
+	@echo + ld $@
+	$(V)$(LD) -o $@ $(KERN_LDFLAGS) $(KERN_OBJFILES) $(GCC_LIB) -b binary $(KERN_BINFILES)
+	$(V)$(OBJDUMP) -S $@ > $@.asm
+	$(V)$(NM) -n $@ > $@.sym
+
+# 如何 build 内核磁盘映像
+$(OBJDIR)/kern/kernel.img: $(OBJDIR)/kern/kernel $(OBJDIR)/boot/boot
+	@echo + mk $@
+	$(V)dd if=/dev/zero of=$(OBJDIR)/kern/kernel.img~ bs=512 count=20000 2>/dev/null
+	$(V)dd if=$(OBJDIR)/boot/boot of=$(OBJDIR)/kern/kernel.img~ conv=notrunc 2>/dev/null
+	$(V)dd if=$(OBJDIR)/kern/kernel of=$(OBJDIR)/kern/kernel.img~ seek=1 conv=notrunc 2>/dev/null
+	$(V)mv $(OBJDIR)/kern/kernel.img~ $(OBJDIR)/kern/kernel.img
+
+all: $(OBJDIR)/kern/kernel.img
+
+grub: $(OBJDIR)/alvos-grub
+
+$(OBJDIR)/alvos-grub: $(OBJDIR)/kern/kernel
+	@echo + oc $@
+	$(V)$(OBJCOPY) --adjust-vma=0x10000000 $^ $@
