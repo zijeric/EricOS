@@ -4,6 +4,9 @@
 #define BUFLEN 1024
 static char buf[BUFLEN];
 
+/**
+ * 等待用户输入一个命令字符串，"回车"代表命令行结束
+ */
 char *
 readline(const char *prompt)
 {

@@ -2,18 +2,16 @@
 #define ALVOS_INC_MMU_H
 
 /*
- * This file contains definitions for the x86 memory management unit (MMU),
- * including paging- and segmentation-related data structures and constants,
- * the %cr0, %cr4, and %eflags registers, and traps.
+ * 这个文件包含x86内存管理单元(MMU)的定义，包括与分页和分段相关的数据结构和常量、%cr0、%cr4、%eflags 寄存器和陷阱相关定义.
  */
 
 /*
  *
- *	Part 1.  Paging data structures and constants.
+ *	Part 1.  分页需要的数据机构和常数.
  *
  */
 
-// A linear address 'la' has a three-part structure as follows:
+// 线性地址'la'有五部分结构，PML4、PDPE、PDX、PTX、PGOFF 和 VPN 宏将线性地址分解为如下所示:
 //
 // +-------9--------+-------9--------+--------9-------+--------9-------+----------12---------+
 // |Page Map Level 4|Page Directory  | Page Directory |   Page Table   | Offset within Page  |
@@ -22,24 +20,23 @@
 // \----PML4(la)----/\--- PDPE(la)---/\--- PDX(la) --/ \--- PTX(la) --/ \---- PGOFF(la) ----/
 //  \------------------------------ VPN(la) -------------------------/
 //
-// The PML4, PDPE, PDX, PTX, PGOFF, and VPN macros decompose linear addresses as shown.
-// To construct a linear address la from PML4(la), PDPE(la), PDX(la), PTX(la), and PGOFF(la),
-// use PGADDR(PML4(la), PDPE(la), PDX(la), PTX(la), PGOFF(la)).
+// 通过使用 PGADDR(PML4(la)、PDPE(la)、PDX(la)、PTX(la)、PGOFF(la))
+// 构造由 PML4(la)、PDPE(la)、PDX(la)、PTX(la) 和 PGOFF(la) 组成的线性地址 la.(如上图)
 
-// page number field of address
+// 物理地址的页号属性 PPN, (page directory index + page table index) 右移12位
 #define PPN(pa)		(((uintptr_t) (pa)) >> PTXSHIFT)
-#define VPN(la)		PPN(la)		// used to index into vpt[]
-#define PGNUM(la)	PPN(la)		// used to index into vpt[]
+#define VPN(la)		PPN(la)		// 用于索引到 vpt[]
+#define PGNUM(la)	PPN(la)		// 用于索引到 vpt[]
 
-// page directory index
+// 页目录索引(page directory index)
 #define PDX(la)		((((uintptr_t) (la)) >> PDXSHIFT) & 0x1FF)
-#define VPD(la)		(((uintptr_t) (la)) >> PDXSHIFT)		// used to index into vpd[]
+#define VPD(la)		(((uintptr_t) (la)) >> PDXSHIFT)		// 用于索引到 vpd[]
 #define VPDPE(la)   (((uintptr_t) (la)) >> PDPESHIFT)
 #define VPML4E(la)  (((uintptr_t) (la)) >> PML4SHIFT)
 
 #define PML4(la)  ((((uintptr_t) (la)) >> PML4SHIFT) & 0x1FF)
 
-// page table index
+// 页表索引(page table index)
 #define PTX(la)		((((uintptr_t) (la)) >> PTXSHIFT) & 0x1FF)
 #define PDPE(la)   ((((uintptr_t) (la)) >> PDPESHIFT) & 0x1FF)
 
@@ -47,36 +44,36 @@
 // offset in page
 #define PGOFF(la)	(((uintptr_t) (la)) & 0xFFF)
 
-// construct linear address from indexes and offset
-#define PGADDR(m,p,d, t, o)	((void*) ((m) << PML4SHIFT| (p) << PDPESHIFT | (d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
+// 由索引和偏移构造线性地址
+#define PGADDR(m, p, d, t, o)	((void*) ((m) << PML4SHIFT| (p) << PDPESHIFT | (d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
 
 // Page directory and page table constants.
-#define NPMLENTRIES	512		// page directory entries per page directory
-#define NPDPENTRIES	512		// page table entries per page table
-#define NPDENTRIES     512
-#define NPTENTRIES     512
+#define NPMLENTRIES	512		// 
+#define NPDPENTRIES	512		// 
+#define NPDENTRIES	512		// 每个页目录的页目录项(pte)数目为512
+#define NPTENTRIES	512		// 每个页表页的页表页项(pte)数目为512
 
-#define PGSIZE		4096		// bytes mapped by a page
+#define PGSIZE		4096	// 一个物理页映射的字节数，即页大小为 4KB
 #define PGSHIFT		12		// log2(PGSIZE)
 
-#define PTSIZE		(PGSIZE*NPTENTRIES) // bytes mapped by a page directory entry
+#define PTSIZE		(PGSIZE*NPTENTRIES) // 页表页项映射的字节，即一个页表对应实际物理内存的大小，即512 * 4KB = 2MB
 #define PTSHIFT		21		// log2(PTSIZE)
 
-#define PTXSHIFT	12		// offset of PTX in a linear address
-#define PDXSHIFT	21		// offset of PDX in a linear address
+#define PTXSHIFT	12		// 线性地址中页表页索引(PTX)的偏移
+#define PDXSHIFT	21		// 线性地址中页目录索引(PDX)的偏移
 #define PDPESHIFT    30
 #define PML4SHIFT   39
 
-// Page table/directory entry flags.
-#define PTE_P		0x001	// Present
-#define PTE_W		0x002	// Writeable
-#define PTE_U		0x004	// User
-#define PTE_PWT		0x008	// Write-Through
-#define PTE_PCD		0x010	// Cache-Disable
-#define PTE_A		0x020	// Accessed
-#define PTE_D		0x040	// Dirty
-#define PTE_PS		0x080	// Page Size
-#define PTE_MBZ		0x180	// Bits must be zero
+// 页目录表/页表的权限位，在访问对应页时CPU会自动地判断，如果访问违规，会产生异常.
+#define PTE_P		0x001	// Present		存在位
+#define PTE_W		0x002	// Writeable	可写位，同时影响 kernel 和 user
+#define PTE_U		0x004	// User			用户1->(0,1,2,3), 管理员0->(0,1,2)
+#define PTE_PWT		0x008	// Write-Through	页级通写位，内存 or 高速缓存
+#define PTE_PCD		0x010	// Cache-Disable	页级高速缓存禁止位
+#define PTE_A		0x020	// Accessed		访问位，由CPU设置，1:已访问可换出到外存
+#define PTE_D		0x040	// Dirty		脏页位，针对页表项，CPU写时置为1
+#define PTE_PS		0x080	// Page Size	页大小位，0:4KB, 1:4MB
+#define PTE_MBZ		0x180	// Bits must be zero 该位必须为0
 
 // The PTE_AVAIL bits aren't used by the kernel or interpreted by the
 // hardware, so user processes are allowed to set them arbitrarily.
@@ -92,17 +89,17 @@
 #define PTE_ADDR(pte)	((physaddr_t) (pte) & ~0xFFF)
 
 // Control Register flags
-#define CR0_PE		0x00000001	// Protection Enable
-#define CR0_MP		0x00000002	// Monitor coProcessor
+#define CR0_PE		0x00000001	// 保护模式启动位
+#define CR0_MP		0x00000002	// 监控协处理器(Monitor coProcessor)
 #define CR0_EM		0x00000004	// Emulation
 #define CR0_TS		0x00000008	// Task Switched
 #define CR0_ET		0x00000010	// Extension Type
 #define CR0_NE		0x00000020	// Numeric Errror
-#define CR0_WP		0x00010000	// Write Protect
+#define CR0_WP		0x00010000	// 写保护位
 #define CR0_AM		0x00040000	// Alignment Mask
 #define CR0_NW		0x20000000	// Not Writethrough
 #define CR0_CD		0x40000000	// Cache Disable
-#define CR0_PG		0x80000000	// Paging
+#define CR0_PG		0x80000000	// 分页位
 
 #define CR4_PCE		0x00000100	// Performance counter enable
 #define CR4_MCE		0x00000040	// Machine Check Enable
@@ -148,7 +145,7 @@
 
 /*
  *
- *	Part 2.  Segmentation data structures and constants.
+ *	Part 2.  分段需要的数据结构和常数.
  *
  */
 
@@ -234,11 +231,11 @@ struct SystemSegdesc64{
 #endif /* !__ASSEMBLER__ */
 
 // Application segment type bits
-#define STA_X		0x8	    // Executable segment
+#define STA_X		0x8	    // 可执行段
 #define STA_E		0x4	    // Expand down (non-executable segments)
 #define STA_C		0x4	    // Conforming code segment (executable only)
-#define STA_W		0x2	    // Writeable (non-executable segments)
-#define STA_R		0x2	    // Readable (executable segments)
+#define STA_W		0x2	    // 可写 (non-executable segments)
+#define STA_R		0x2	    // 可读 (executable segments)
 #define STA_A		0x1	    // Accessed
 
 // System segment type bits
@@ -258,19 +255,19 @@ struct SystemSegdesc64{
 
 /*
  *
- *	Part 3.  Traps.
+ *	Part 3.  中断/陷阱(Traps).
  *
  */
 
 #ifndef __ASSEMBLER__
 
-// Task state segment format (as described by the Pentium architecture book)
+// 任务状态段TSS(Task state segment)格式 (参照 Pentium Architecture Book 中的 TSS 结构定义)
 struct Taskstate {
-	uint32_t ts_res1;	// -- reserved in long mode
-	uintptr_t ts_esp0;	// Stack pointers and segment selectors
+	uint32_t ts_res1;	// -- 长模式中的保留位
+	uintptr_t ts_esp0;	// 栈指针
 	uintptr_t ts_esp1;
 	uintptr_t ts_esp2;
-	uint64_t ts_res2;	// reserved in long mode
+	uint64_t ts_res2;	// 长模式中的保留位
     uint64_t ts_ist1;
     uint64_t ts_ist2;
     uint64_t ts_ist3;
@@ -280,24 +277,25 @@ struct Taskstate {
     uint64_t ts_ist7;
     uint64_t ts_res3;
     uint16_t ts_res4;
-	uint16_t ts_iomb;	// I/O map base address
+	uint16_t ts_iomb;	// I/O 映射基址
 }__attribute__ ((packed));
 
-// Gate descriptors for interrupts and traps
+// 中断门和陷阱门的描述符(Gate descriptors for interrupts and traps)结构体，定义门各个段的字节数
 struct Gatedesc {
-	unsigned gd_off_15_0 : 16;   // low 16 bits of offset in segment
-	unsigned gd_ss : 16;         // segment selector
-	unsigned gd_ist : 3;        // # args, 0 for interrupt/trap gates
-	unsigned gd_rsv1 : 5;        // reserved(should be zero I guess)
-	unsigned gd_type : 4;        // type(STS_{TG,IG32,TG32})
-	unsigned gd_s : 1;           // must be 0 (system)
-	unsigned gd_dpl : 2;         // descriptor(meaning new) privilege level
-	unsigned gd_p : 1;           // Present
-	unsigned gd_off_31_16 : 16;  // high bits of offset in segment
-    uint32_t gd_off_32_63;       
-    uint32_t gd_rsv2;                   
+	unsigned gd_off_15_0 : 16;   // 段中低16位的偏移量
+	unsigned gd_ss : 16;         // 段描述符
+	unsigned gd_ist : 3;         // # args, 0 for interrupt/trap gates
+	unsigned gd_rsv1 : 5;        // 保留位
+	unsigned gd_type : 4;        // 类型(STS_{TG,IG32,TG32})
+	unsigned gd_s : 1;           // 必须为0 (system)
+	unsigned gd_dpl : 2;         // 描述符(新的)特权级别，0:kernel, 3:user
+	unsigned gd_p : 1;           // 存在位
+	unsigned gd_off_31_16 : 16;  // 段中高16位的偏移量
+    uint32_t gd_off_32_63;       // 段中高32位的偏移量
+    uint32_t gd_rsv2;            // 保留位
 };
 
+// 构造 TSS
 #define SETTSS(desc,type,base,lim,dpl)   \
 {         \
     (desc)->sd_lim_15_0 = (uint64_t) (lim) & 0xffff; \
@@ -317,20 +315,17 @@ struct Gatedesc {
     (desc)->sd_clear = 0; \
     (desc)->sd_res2 = 0; \
 }
-// Set up a normal interrupt/trap gate descriptor.
-// - istrap: 1 for a trap (= exception) gate, 0 for an interrupt gate.
-    //   see section 9.6.1.3 of the i386 reference: "The difference between
-    //   an interrupt gate and a trap gate is in the effect on IF (the
-    //   interrupt-enable flag). An interrupt that vectors through an
-    //   interrupt gate resets IF, thereby preventing other interrupts from
-    //   interfering with the current interrupt handler. A subsequent IRET
-    //   instruction restores IF to the value in the EFLAGS image on the
-    //   stack. An interrupt through a trap gate does not change IF."
-// - sel: Code segment selector for interrupt/trap handler
-// - off: Offset in code segment for interrupt/trap handler
-// - dpl: Descriptor Privilege Level -
-//	  the privilege level required for software to invoke
-//	  this interrupt/trap gate explicitly using an int instruction.
+
+// 构造中断/陷阱门描述符(interrupt/trap gate descriptor)，格式如: pic/中断门.png
+// - istrap: 1->trap(=exception)gate, 0->interrupt gate
+	//	根据i386参考文献的9.6.1.3:“中断门(interrupt gate)和陷阱门(trap gate)的区别在于对IF(interrupt-enable中断使能标志)的影响
+	//	通过中断门引导的中断会将IF标志位复位，从而防止其他中断干扰当前的 中断处理程序(interrupt handler)
+	//	随后的 IRET指令 将IF标志位恢复到栈上的 EFLAGS 映像中的值
+	//	但是，通过陷阱门 trap(=exception) 的中断不会改变IF标志位. ”
+// - sel: 中断处理程序(interrupt/trap handler)的代码段选择子
+// - off: 中断处理程序的代码段中的偏移量
+// - dpl: 描述符特权级别(DPL) -
+//    软件使用 int 指令显式调用该中断/陷阱门(interrupt/trap gate)所需的特权级别
 #define SETGATE(gate, istrap, sel, off, dpl)			\
 {	                        \
     (gate).gd_off_15_0 = (uint64_t) (off) & 0xffff;		\
@@ -346,7 +341,7 @@ struct Gatedesc {
     (gate).gd_rsv2 = 0;               \
 }
 
-// Set up a call gate descriptor.
+// 构造调用门描述符(call gate descriptor).
 #define SETCALLGATE(gate, ss, off, dpl)           	        \
 {								\
 	(gate).gd_off_15_0 = (uint32_t) (off) & 0xffff;		\
@@ -362,10 +357,10 @@ struct Gatedesc {
     (gate).gd_rsv2 = 0;               \
 }
 
-// Pseudo-descriptors used for LGDT, LLDT and LIDT instructions.
+// LGDT、LLDT 和 LIDT 指令使用的伪描述符.
 struct Pseudodesc {
-	uint16_t pd_lim;		// Limit
-	uint64_t pd_base;		// Base address
+	uint16_t pd_lim;		// 界限 Limit
+	uint64_t pd_base;		// 基址 Base address
 } __attribute__ ((packed));
 
 #endif /* !__ASSEMBLER__ */

@@ -10,8 +10,8 @@ KERN_LDFLAGS := $(LDFLAGS) -T kern/kernel.ld -nostdlib --no-gc-sections --print-
 # entry.S 必须是第一个，这样它是文本段中的第一个代码！
 #
 # 为了避免不必要的代码重复，还从lib目录中使用了几个方便的源文件.
-KERN_SRCFILES :=	kern/entry.S \
-            kern/bootstrap.S \
+KERN_SRCFILES :=	kern/bootstrap.S \
+            kern/entry.S \
 			kern/init.c \
 			kern/console.c \
 			kern/monitor.c \

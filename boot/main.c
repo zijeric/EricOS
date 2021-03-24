@@ -2,7 +2,7 @@
 #include "inc/elf.h"
 
 /**************************************************************************************
- * 这是一个非常简单的引导加载程序，它唯一的工作就是从第一个 IDE 硬盘引导一个 ELF 内核映像.
+ * 这是一个非常简单的引导加载程序，唯一的工作就是从第一个 IDE 硬盘引导一个 ELF 内核映像.
  *
  * 磁盘布局
  *  * 这个程序(boot.S and main.c)是引导加载器程序，应该被保存在磁盘的第一个扇区
@@ -20,16 +20,16 @@
  *
  *  * 控制从 boot.S 中开始 -- boot.S 设置保护模式和内核栈，为了运行 C 代码，然后调用 bootmain()
  *
- *  * 这个文件中的 bootmain() 将接管内核，读取内核并跳转到内核.
+ *  * 这个文件中的 bootmain() 将接管内核，读取内核到内存并跳转到内核.
  **************************************************************************************/
 
 #define SECTSIZE	512
-// 指向常量0x10000的结构体指针
+// 定义一个指向内存中 ELF 文件头存放位置的结构体指针
 // (类似于数组名，不可以通过指针修改指向变量的值)
-#define ELFHDR		((struct Elf *) 0x10000) // scratch space
+#define ELFHDR		((struct Elf *) 0x10000) // 
 
-void readsect(void*, uint32_t);
-void readseg(uint32_t, uint32_t, uint32_t);
+// void readsect(void*, uint32_t);
+void readseg(uint32_t, uint32_t, uint32_t);	// 读取 ELF 文件中的一个段
 
 
 void
@@ -54,25 +54,21 @@ bootmain(void)
 	if (ELFHDR->e_magic != ELF_MAGIC)
 		return;
 
-	// ph: 指向程序段头部的指针，准备加载所有程序段
-	// 从磁盘中 ELF 头之后 e_phoff(Program Header's offset)字节处读取扇区的内容，
-	// 程序头表项的起始地址包含了 Program Header Table。
-	// 这个表格存放着程序中所有段的信息。通过这个表我们才能找到要执行的代码段，数据段到底有多少等等。
-	// 反汇编：ph = 0x10000 + [0x10001c]=52 (struct Elf 内e_phoff的偏移量)
+	// ph: 指向程序段头表的指针，准备加载所有程序段
 	ph = (struct Proghdr *) ((uint8_t *) ELFHDR + ELFHDR->e_phoff);
-	// ELFHDR中程序段的数量: eph = (struct Proghdr *)0x10000 + e_phoff + e_phnum;
+	// 明确 ELF 文件中程序段的个数: eph = (struct Proghdr *)0x10000 + e_phoff + e_phnum;
 	eph = ph + ELFHDR->e_phnum;
 
-	// 将内核的各个段加载进入内存，ph++(struct Proghdr)
+	// 将内核的每一段依次加载到内存相应的位置，ph++(struct Proghdr)
 	for (; ph < eph; ph++)
 		// 将ELFHDR中所有的程序段信息读入 ph
 		// p_pa: 目标加载地址(期望包含该段的目的物理地址: 0x100000)，由 kernel.ld 决定内核的起始物理地址
 		// p_memsz: 在内存中的大小，p_offset: 被读取时的偏移量
 		readseg(ph->p_pa, ph->p_memsz, ph->p_offset);
 
-	// bootstrap 执行的最后一条指令：将内核ELF文件载入内存后，从ELF文件头调用内核入口地址 entry, 且永不返回
 	// 为了传递参数 multiboot_info，将其传入 EBX
     __asm __volatile("movl %0, %%ebx": : "r" (multiboot_info));
+	// bootstrap 执行的最后一条指令：将内核 ELF 文件载入内存后，转移到入口地址 entry 执行, 且永不返回
 	((void (*)(void)) ((uint32_t)(ELFHDR->e_entry)))();
 }
 
@@ -85,20 +81,21 @@ readseg(uint32_t pa, uint32_t count, uint32_t offset)
 
 	// 结束物理地址
 	end_pa = pa + count;
+	// 偏移地址
 	uint32_t orgoff = offset;
 	
 	// 向下舍入到扇区边界
 	pa &= ~(SECTSIZE - 1);
 
-	// 从字节转换为扇区，内核从扇区3开始
+	// offset 从字节转换为硬盘的第i扇区，内核从扇区3开始，
 	offset = (offset / SECTSIZE) + 1;
 
 	// 如果速度太慢，我们可以一次读取许多扇区.
 	// 我们会在内存中写入比要求的更多的内容，但是没关系 —— 我们以递增的顺序加载.
 	while (pa < end_pa) {
-		// readsect((uint8_t*) pa, offset);
-		// 等待磁盘就绪
-		while ((inb(0x1F7) & 0xC0) != 0x40);
+		// 循环等待磁盘就绪
+		while ((inb(0x1F7) & 0xC0) != 0x40)
+			;
 
 		outb(0x1F2, 1);
 		outb(0x1F3, offset);
@@ -107,10 +104,11 @@ readseg(uint32_t pa, uint32_t count, uint32_t offset)
 		outb(0x1F6, (offset >> 24) | 0xE0);
 		outb(0x1F7, 0x20);
 
-		// 等待磁盘就绪
-		while ((inb(0x1F7) & 0xC0) != 0x40);
+		// 循环等待磁盘就绪
+		while ((inb(0x1F7) & 0xC0) != 0x40)
+			;
 
-		// 读取一个扇区
+		// 读取一个扇区，数据存放在内存中的 pa
 		insl(0x1F0, (uint8_t*) pa, SECTSIZE/4);
 
 		pa += SECTSIZE;

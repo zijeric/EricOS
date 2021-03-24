@@ -35,25 +35,24 @@
 .long MULTIBOOT_HEADER_FLAGS
 .long CHECKSUM
 
-# '_start' 指定 ELF 的 entry point.
-# 因为在 bootloader 进入这段代码时，还没有设置虚拟内存，所以需要 bootloader 跳转到 entry point 的 *物理*地址
+# 因为 bootstrap 进入这段代码时，还没有设置虚拟内存，所以需要 bootloader 跳转到 entry point 的 *物理*地址
 .globl		_start
 _start = RELOC(entry)
 
 .globl entry
 entry:
 
-/* .globl _back_from_head64 */
-/* _back_from_head64: */
-    # 内核ELF文件中的第一条指令
+    # 加载新的 GDT
     movabs   $gdtdesc_64, %rax
     lgdt     (%rax)
+    # 初始化以下段寄存器为数据段选择子
     movw    $DATA_SEL, %ax
     movw    %ax, %ds
     movw    %ax, %ss
     movw    %ax, %fs
     movw    %ax, %gs
     movw    %ax, %es
+    # 通过 push 代码段选择子和指令偏移，再 lret 刷新 cs:rip 切换到新的 GDT
     pushq   $CODE_SEL
     movabs  $relocated, %rax
     pushq   %rax
@@ -67,7 +66,7 @@ relocated:
 	movabs	$(bootstacktop), %rax
 	movq  %rax, %rsp
 
-	# 现在间接调用函数 i386_init() 
+	# 间接调用函数 i386_init() 
     movabs $i386_init, %rax
 	call *%rax
 
@@ -82,7 +81,7 @@ spin:	jmp	spin
 	.p2align	PGSHIFT		# 强制页对齐
 	.globl		bootstack
 bootstack:
-	.space		KSTKSIZE
+	.space		KSTKSIZE    # 从此处地址开始的 KSTKSIZE:32KB(inc/memlayout.h) 字节的区域都属于临时内核栈
 	.globl		bootstacktop   
 bootstacktop:
 

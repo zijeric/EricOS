@@ -12,6 +12,9 @@ uint64_t end_debug;
 
 
 // 测试栈回溯函数 mon_backtrace
+/**
+ * 递归调用自身
+ */
 void
 test_backtrace(int x)
 {
@@ -27,17 +30,19 @@ void
 i386_init(void)
 {
     /* __asm __volatile("int $12"); */
-
+	// 在 kern/kernel.ld 初始化
+	// GCC特性：这两个变量都是在链接（生成ELF文件时）产生的地址，GCC会在生成二进制文件的时候将这两个符号置换成地址
+	// edata: .bss节在内存中开始的位置，end: 内核可执行程序在内核中结束的位置，.bss是文件在内存中的个最后一部分
 	extern char edata[], end[];
 
 	// 在执行任何其他操作之前，必须先完成 ELF 加载过程.
 	// 为了确保所有静态/全局变量初始值为 0，清除程序中未初始化的全局数据(BSS)部分.
 	memset(edata, 0, end - edata);
 
-	// 初始化控制台. 在此之后才能调用 cprintf()!
+	// 初始化控制台(包括显存的初始化、键盘的初始化). 在此之后才能调用 cprintf()!
 	cons_init();
 
-	cprintf("6828 decimal is %o octal!\n", 6828);
+	cprintf("6828 decimal is %o octal!\n", 6828);// 测试打印
 
     extern char end[];
     end_debug = read_section_headers((0x10000+KERNBASE), (uintptr_t)end); 

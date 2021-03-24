@@ -8,13 +8,10 @@
 #include "inc/error.h"
 
 /*
- * Space or zero padding and a field width are supported for the numeric
- * formats only.
+ * 只支持数字格式的空格或零填充和字段宽度.
  *
- * The special format %e takes an integer error code
- * and prints a string describing the error.
- * The integer may be positive or negative,
- * so that -E_NO_MEM and E_NO_MEM are equivalent.
+ * 特殊格式 %e 采用一个整数错误代码并打印一个描述错误的字符串.
+ * 整数可以是正数也可以是负数，因此 -E_NO_MEM 和 E_NO_MEM 是等价的.
  */
 
 static const char * const error_string[MAXERROR] =
@@ -28,23 +25,23 @@ static const char * const error_string[MAXERROR] =
 };
 
 /*
- * Print a number (base <= 16) in reverse order,
- * using specified putch function and associated pointer putdat.
+ * 使用指定的 putch 函数和关联的指针 putdat 倒序打印一个数字(base <= 16)
+ * num: 需要打印出来的整型数，base: 整型数的进制，其他参数同 vprintfmt
  */
 static void
 printnum(void (*putch)(int, void*), void *putdat,
 	 unsigned long long num, unsigned base, int width, int padc)
 {
-	// first recursively print all preceding (more significant) digits
+	// 当 num 超过一位数，首先递归函数自身打印所有高位的(更重要的)数字
 	if (num >= base) {
 		printnum(putch, putdat, num / base, base, width - 1, padc);
 	} else {
-		// print any needed pad characters before first digit
+		// 按照右对齐的格式在左侧补齐填充字符 padc
 		while (--width > 0)
 			putch(padc, putdat);
 	}
 
-	// then print this (the least significant) digit
+	// 然后打印个位数字
 	putch("0123456789abcdef"[num % base], putdat);
 }
 
@@ -88,10 +85,16 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 	register const char *p;
 	register int ch, err;
 	unsigned long long num;
+	// width: 代表的一个字符串或一个数字在屏幕上所占的宽度
+	// precision: 一个字符串在屏幕上应显示的长度，precision > width 
+	// lflag: 在输出数字时(不支持浮点数)，0: 视参数为int输出，1:视参数为long输出，2: 视参数为long long输出
+	// altflag: 当lflag = 1，若输出乱码用'?'代替
 	int base, lflag, width, precision, altflag;
+
+	// 填充字符，在显示字符串的'%'后读到'-'或'0'时，赋值到 padc
 	char padc;
 	va_list aq;
-	va_copy(aq,ap);
+	va_copy(aq, ap);
 	while (1) {
 		while ((ch = *(unsigned char *) fmt++) != '%') {
 			if (ch == '\0')
@@ -99,9 +102,11 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 			putch(ch, putdat);
 		}
 
-		// Process a %-escape sequence
+		// 处理 % 转义序列
+		// padc 初始化为空格符，padc='-'代表字符串左对齐，右边补空格，padc=' '代表右对齐，左边补空格，padc='0'右对齐，左边补0
 		padc = ' ';
 		width = -1;
+		// 默认-1代表显示长度为字符串本来的长度
 		precision = -1;
 		lflag = 0;
 		altflag = 0;
@@ -177,18 +182,20 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 
 		// string
 		case 's':
+			// 从可变参数中读入字符串指针
 			if ((p = va_arg(aq, char *)) == NULL)
-				p = "(null)";
+				p = "(null)";		// 当字符串为空时，将它指向"(null)"字符串
+			// 判断左对齐还是右对齐，pad='-'左对齐，否则右对齐
 			if (width > 0 && padc != '-')
 				for (width -= strnlen(p, precision); width > 0; width--)
-					putch(padc, putdat);
+					putch(padc, putdat);	// 字符串右对齐，左边补相应数量(width-实际长度)的空格或者 0
 			for (; (ch = *p++) != '\0' && (precision < 0 || --precision >= 0); width--)
 				if (altflag && (ch < ' ' || ch > '~'))
 					putch('?', putdat);
 				else
-					putch(ch, putdat);
+					putch(ch, putdat);		// 打印相应长度的字符串
 			for (; width > 0; width--)
-				putch(' ', putdat);
+				putch(' ', putdat);			// 当字符串是左对齐的时候打印相应数量的空格
 			break;
 
 		// (signed) decimal
