@@ -7,23 +7,29 @@
 #endif /* not __ASSEMBLER__ */
 
 /*
- * This file contains definitions for memory management in our OS,
- * which are relevant to both the kernel and user-mode software.
+ * 这个文件包含操作系统中内存管理的定义，与内核态和用户态软件都相关。
  */
 
-// Global descriptor numbers
-#define GD_KT     0x08     // kernel text
-#define GD_KD     0x10     // kernel data
-#define GD_UT     0x18     // user text
-#define GD_UD     0x20     // user data
-#define GD_TSS0   0x28     // Task segment selector for CPU 0
+// 全局描述符索引(选择子)
+#define GD_KT 0x08	 // 内核代码
+#define GD_KD 0x10	 // 内核数据
+#define GD_UT 0x18	 // 用户代码
+#define GD_UD 0x20	 // 用户数据
+#define GD_TSS0 0x28 // CPU0的TSS(任务状态段选择子)
 
 /*
+ * 64-bit CPU 线性地址空间分为两部分，内核控制 ULIM 之上的地址空间，为内核保留大约256MB[0x80 03c0 0000, 0xff ffff ffff]的虚拟地址空间，
+ * 用户环境控制下方部分，约3.72G[0x0, 0x8003c00000]
+ *
+ * 用户环境将没有对以上 ULIM 内存的任何权限，只有内核能够读写这个内存；
+ * [UTOP, ULIM]，内核和用户环境都可以读取但不能写入这个地址范围，此地址范围用于向用户环境公开某些只读内核数据结构；
+ * UTOP 下的地址空间供用户环境使用;用户环境将设置访问此内存的权限
+ *
  * Virtual memory map:                                Permissions
  *                                                    kernel/user
  *
- *     1 TB -------->  +------------------------------+
- *                     |                              | RW/--
+ *     1 TB -------->  +------------------------------+ 0x10000000000
+ *     UVPT -/         |                              | RW/--
  *                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *                     :              .               :
  *                     :              .               :
@@ -60,13 +66,13 @@
  *    USTACKTOP  --->  +------------------------------+ 0xef7fe000
  *                     |      Normal User Stack       | RW/RW  PGSIZE
  *                     +------------------------------+ 0xef7fd000
- *                     | n                            |
+ *                     |                              |
  *                     |                              |
  *                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *                     .                              .
  *                     .                              .
  *                     .                              .
- *      N              |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
+ *                     |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|
  *                     |     Program Data & Heap      |
  *    UTEXT -------->  +------------------------------+ 0x00800000
  *    PFTEMP ------->  |       Empty Memory (*)       |        PTSIZE
@@ -79,69 +85,68 @@
  *                     |       Empty Memory (*)       |                   |
  *    0 ------------>  +------------------------------+                 --+
  *
- * (*) Note: The kernel ensures that "Invalid Memory" is *never* mapped.
- *     "Empty Memory" is normally unmapped, but user programs may map pages
- *     there if desired.  AlvOS user programs map pages temporarily at UTEMP.
+ * (*) 注意: AlvOS 内核确保"Invalid Memory"是*从不*映射.
+ *     "Empty Memory"一般没有映射
+ * 	   例外: AlvOS 用户程序*有权*根据需要在 UTEMP 临时映射物理页.
  */
 
+// 内核所有的物理内存必须映射到 KERNBASE 才能执行
+#define KERNBASE 0x8004000000
 
-// All physical memory mapped at this address
-#define	KERNBASE	0x8004000000
+// 在 IOPHYSMEM (640K) 有一个 384K 的 I/O 区域.
+// 在内核，IOPHYSMEM 可以通过 [KERNBASE + IOPHYSMEM] 访问.
+#define IOPHYSMEM 0x0A0000
+// I/O 区域结束于物理地址 EXTPHYSMEM
+#define EXTPHYSMEM 0x100000
 
-// At IOPHYSMEM (640K) there is a 384K hole for I/O.  From the kernel,
-// IOPHYSMEM can be addressed at KERNBASE + IOPHYSMEM.  The hole ends
-// at physical address EXTPHYSMEM
-#define IOPHYSMEM	0x0A0000
-#define EXTPHYSMEM	0x100000
+// 内核栈虚拟地址.
+#define KSTACKTOP KERNBASE
+// 内核栈大小
+#define KSTKSIZE (16 * PGSIZE)
+// 内核栈保护页大小
+#define KSTKGAP (8 * PGSIZE)
 
-// Kernel stack.
-#define KSTACKTOP	KERNBASE
-#define KSTKSIZE	(16 * PGSIZE)   		// size of a kernel stack
-#define KSTKGAP		(8 * PGSIZE)   		// size of a kernel stack guard
+// I/O 内存映射.
+#define MMIOLIM (KSTACKTOP - PTSIZE)
+#define MMIOBASE (MMIOLIM - PTSIZE)
 
-// Memory-mapped IO.
-#define MMIOLIM		(KSTACKTOP - PTSIZE)
-#define MMIOBASE	(MMIOLIM - PTSIZE)
-
-#define ULIM		(MMIOBASE)
+#define ULIM (MMIOBASE)
 
 /*
- * User read-only mappings! Anything below here til UTOP are readonly to user.
- * They are global pages mapped in at env allocation time.
+ * [ULIM, UTOP]的所有内容都是用户只读映射！
+ * 内容是在 env 分配时映射到的全局物理页.
  */
-
-// User read-only virtual page table (see 'uvpt' below)
-
+// 用户只读虚拟页表(addr 1TB)
 #define UVPT    0x10000000000
-// Read-only copies of the Page structures
+// pageInfo 结构 pages[] 的只读映射副本
 #define UPAGES		(ULIM - 25 * PTSIZE)
-// Read-only copies of the global env structures
-#define UENVS		(UPAGES - PTSIZE)
+// 全局 env 结构 envs[] 的只读映射副本
+#define UENVS (UPAGES - PTSIZE)
 
 /*
- * Top of user VM. User can manipulate VA from UTOP-1 and down!
+ * 用户虚拟内存的顶部，用户只可以操作[0,UTOP-1]的虚拟内存
  */
+// 用户可访问的虚拟内存顶部
+#define UTOP UENVS
 
-// Top of user-accessible VM
-#define UTOP		UENVS
+// 用户异常栈的顶部(PGSIZE大小)
+#define UXSTACKTOP 0xef800000
+// 为了防止栈溢出异常，下一页(保护页)无效
+#define USTACKTOP (UXSTACKTOP - 2 * PGSIZE)
 
-// Top of one-page user exception stack
-#define UXSTACKTOP	0xef800000
-// Next page left invalid to guard against exception stack overflow; then:
-// Top of normal user stack
-#define USTACKTOP	(UXSTACKTOP - 2*PGSIZE)
+// 用户程序一般从 UTEXT(0x00800000) 开始
+#define UTEXT (4 * PTSIZE)
 
-// Where user programs generally begin
-#define UTEXT		(4*PTSIZE)
 
-// Used for temporary page mappings.  Typed 'void*' for convenience
+// 用于临时页映射，类型为'void *'，方便转换为任何类型
+#define UTEMP ((void *)((int)(2 * PTSIZE)))
+// 用于用户页故障处理程序的临时页映射（不应与其他临时页映射冲突）
+#define PFTEMP (UTEMP + PTSIZE - PGSIZE)
+// 用户态 STABS 数据结构的虚拟地址
+#define USTABDATA (PTSIZE)
 
-#define UTEMP		((void*) ((int)(2*PTSIZE)))
-// Used for temporary page mappings for the user page-fault handler
-// (should not conflict with other temporary page mappings)
-#define PFTEMP		(UTEMP + PTSIZE - PGSIZE)
-// The location of the user-level STABS data structure
-#define USTABDATA	(PTSIZE)
+// 非引导 CPUs(APs) 的引导代码的物理地址
+#define MPENTRY_PADDR 0x7000
 
 #ifndef __ASSEMBLER__
 
@@ -149,6 +154,45 @@ typedef uint64_t pml4e_t;
 typedef uint64_t pdpe_t;
 typedef uint64_t pte_t;
 typedef uint64_t pde_t;
+
+// 由用户态的环境使用
+#if ALVOS_USER
+/**
+ * 页目录项对应的虚拟地址范围[UVPT, UVPT + PTSIZE)指向页目录本身
+ * 因此，页目录既是页表，也是页目录
+ * 将页目录作为页表处理的有两个好处：
+ * 1.所有 pte 都可以通过虚拟地址 UVPT(lib/entry.S) 的"虚拟页表"访问
+ * PGNUM(页码)为 N 的 PTE 存储在 uvpt[N] 中
+ * 2.当前页目录的内容将始终在虚拟地址(UVPT + (UVPT >> PGSHIFT))中可用
+ * uvpd在lib/entry.S中设置
+ */
+extern volatile pte_t uvpt[];	 // VA of "virtual page table"
+extern volatile pde_t uvpd[];	 // VA of current page directory
+extern volatile pde_t uvpde[];	 // VA of current page directory pointer
+extern volatile pde_t uvpml4e[]; // VA of current page map level 4
+#endif
+
+/**
+ * 页结构，映射到 UPAGES
+ * 内核: 读/写，用户程序: 只读
+ * 
+ * 每个 PageInfo 结构体存储一个页的元数据，页和 struct PageInfo 之间的一对一的对应关系
+ * 可以page2pa()将结构 (PageInfo*) 映射到相应的地址
+ * 将物理内存切成每个元素 PGSIZE 大小的数组，并用 struct PageInfo 存储当前物理页引用次数
+ * 同时，struct PageInfo是链表结构，所以可以通过 free_page_list 快速地找到可用空闲页
+ */
+struct PageInfo
+{
+	// 指向空闲页列表中的下一个页(结构)，非空闲页的 pp_link 为NULL
+	struct PageInfo *pp_link;
+
+	// 该页被引用的次数，即被映射(map)到虚拟地址的数量（通常在页表页项中）
+	// 当引用数为 0，即可释放
+	// 随着内核实现的深入会将同样的页映射到多个虚拟地址空间，需要在 pp_ref 保持页被引用的次数(当引用计数归0，页不再被使用，可以被释放)
+	// 总的来说，引用计数应当等于页在 UTOP 之下出现的次数(UTOP之上的页会在boot阶段被内核分配且永不被释放，所以不需要对其进行引用计数)
+	// 引用计数也会被用来追踪指向页目录页的指针数，以及页目录对页表页的引用数，页目录指针页和第4级页表类似
+	uint16_t pp_ref;
+};
 
 #endif /* !__ASSEMBLER__ */
 #endif /* !ALVOS_INC_MEMLAYOUT_H */

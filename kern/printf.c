@@ -20,17 +20,15 @@ putch(int ch, int *cnt)
  * fmt: 显示字符串的指针，可变参数之前的固定参数
  * ap: 函数可变参数指针
  */
-int
-vcprintf(const char *fmt, va_list ap)
+int vcprintf(const char *fmt, va_list ap)
 {
 	int cnt = 0;
-    va_list aq;
-    va_copy(aq,ap);
+	va_list aq;
+	va_copy(aq, ap);
 	// putch 作为函数指针，输出一个字符在屏幕上
-	vprintfmt((void*)putch, &cnt, fmt, aq);
-    va_end(aq);
+	vprintfmt((void *)putch, &cnt, fmt, aq);
+	va_end(aq);
 	return cnt;
-
 }
 
 /**
@@ -38,21 +36,19 @@ vcprintf(const char *fmt, va_list ap)
  * fmt: 显示字符串的指针，可变参数之前的固定参数
  * 函数参数都存放在内存的栈，从右至左依次 push 进栈，每个参数根据类型分配相应大小的空间
  */
-int
-cprintf(const char *fmt, ...)
+int cprintf(const char *fmt, ...)
 {
 	// va_list 指向参数的指针
 	va_list ap;
 	int cnt;
 	// 初始化 ap 变量，ap -> 可变参数1
 	va_start(ap, fmt);
-    va_list aq;
+	va_list aq;
 	// aq(ap) -> 可变参数1
-    va_copy(aq, ap);
+	va_copy(aq, ap);
 	cnt = vcprintf(fmt, aq);
 	// 结束对可变参数的获取
 	va_end(aq);
 
 	return cnt;
 }
-

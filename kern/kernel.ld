@@ -3,14 +3,14 @@
    参考 GNU ld 'info' 手册 ("info ld"). */
 /* 将内核链接后的输出文件格式(默认、大端、小端)定义为 elf64-x86-64
     内核计算机架构为 i386:x86-64，
-    内核的 e_entry 定义为 _switch64 (kern/bootstrap.S)，内核(执行程序)的第一条指令所在地址 */
+    内核的 e_entry 定义为 entry (kern/bootstrap.S)，内核(执行程序)的第一条指令所在地址 */
 OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64", "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
-ENTRY(_switch64)
+ENTRY(entry)
 
 SECTIONS
 {
-    /* "."是定位器，用于调整程序被链接到内存的偏移位置(地址)，将 bootstrap 位置设置在地址 0x100000(线性地址=加载地址) */
+    /* "."是定位器，用于调整程序被链接到内存的偏移位置(地址)，将 bootstrap.o 位置设置在地址 0x100000(线性地址=加载地址) */
     . = 0x100000;
 
     .bootstrap : {
@@ -27,7 +27,7 @@ SECTIONS
 		*(EXCLUDE_FILE(obj/kern/bootstrap.o) .text .stub .text.* .gnu.linkonce.t.*)
 	}
 
-    /* 初始化etext[]，etext标识符代表 .text 程序段的末尾线性地址 */
+    /* PROVIDE(symbol = expression) 初始化etext[]，etext标识符代表 .text 程序段的末尾线性地址 */
 	PROVIDE(etext = .);
 
     /* .rodata 只读数据段位于 .text 代码段之后 */

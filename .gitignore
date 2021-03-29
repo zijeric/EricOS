@@ -12,5 +12,4 @@
 /init.*
 /__pycache__
 stabs.txt
-/vivek.map
 /mergedep.pl
