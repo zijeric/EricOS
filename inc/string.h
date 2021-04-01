@@ -23,4 +23,4 @@ void *	memfind(const void *s, int c, size_t len);
 long	strtol(const char *s, char **endptr, int base);
 char *  strstr(const char *in, const char *str);
 
-#endif /* not ALVOS_INC_STRING_H */
+#endif /* !ALVOS_INC_STRING_H */

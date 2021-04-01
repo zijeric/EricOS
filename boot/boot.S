@@ -1,7 +1,6 @@
 #include "inc/mmu.h"
-# bootlaoder: <AT&T> boot.S + <C> main.c
-# boot.S: 将 CPU 从实模式转换到32位保护模式，再跳转到main.c
-# 只有在保护模式中才嗯那个访问到物理内存高于 1MB 的空间
+# bootloader: <AT&T ASM> boot.S + <C> main.c
+# boot.S: 将 CPU 加载E820内存映射，并从实模式转换到32位保护模式(访问1MB以上内存)，再跳转到main.c
 #
 # BIOS将该代码从硬盘的第一个扇区加载到物理地址为0x7C00的内存中，
 # 并在%cs=0 %rip=0x7C00的实模式下开始执行.
@@ -9,14 +8,24 @@
 # 生成kernel.img磁盘映像时，boot.S中的引导代码将会被放在引导扇区
 # 80386 CPU 加电启动后，会执行BIOS中的默认引导程序，BIOS引导程序会将引导扇区中(第一个磁盘块)的内容读入内存，并放置在0x7C00
 # 随后CPU会跳转到0x7c00处开始第一条指令的执行，即boot.S的第一条指令(start:)
+#
+# 64-bit: 获取 E820 内存映射，通过 BIOS 功能来获得当前内存配置状态
+# 参考: https://wiki.osdev.org/Detecting_Memory_(x86)#Getting_an_E820_Memory_Map, http://www.uruk.org/orig-grub/mem64mb.html
+# 到目前为止，检测 PC 内存的最好方法是使用 INT 0x15，EAX = 0xE820命令
+# 这个功能可以在2002年以后制造的所有PC上使用，也可以在此之前的大多数现有个人电脑上使用
+# ***这是唯一可以检测到4G以上的内存区域的 BIOS 功能，它旨在成为终极的内存检测BIOS功能
+# 实际上，这个函数返回一个未排序的列表，其中可能包含未使用的项，并且(在极少、不可靠的情况下)可能返回重叠区域
+# 每个列表项都存储在内存中的 ES: DI 中，并且 DI 不会为您递增
+# 最好的方法可能是将列表项存储为24字节的数量 ---- 如果没有其他方法的话，可以保留 uint64 t 的对齐(确保在每次调用之前将最后一个 uint64_t 设置为1，以使您的映射与 ACPI 兼容)
 
 .set PROT_MODE_CSEG, 0x8         # 内核代码段选择子
 .set PROT_MODE_DSEG, 0x10        # 内核数据段选择子
 .set CR0_PE_ON,      0x1         # 启用保护模式的标志位
 
-// 构造 multiboot 结构，用于将引导信息从引导加载程序传递到内核的标准
-// multiboot 的信息放在该 boot 扇区地址之后
+// 构造 multiboot 结构，用于将引导信息从 bootloader 传递到内核的标准
+// multiboot 的信息放在 [0x7000, 0x7400](其他未使用地址也可)，实现参考规范 https://www.gnu.org/software/grub/manual/multiboot/multiboot.html
 .set multiboot_info, 0x7000
+// 以下为基于 0x7000 基址和 multiboot 信息大小所推算的数字(魔数解释)
 .set e820_map, multiboot_info + 52
 
 .set MB_flag, multiboot_info
@@ -26,7 +35,7 @@
 .globl multiboot_info
 .globl start
 start:
-  .code16                     # 声明以下为16位模式的汇编代码
+  .code16                     # 声明以下为16位实模式的汇编代码
   cli                         # 禁用中断，当前内核仍无法处理中断
   cld                         # 关闭字符串操作顺序递增(从低地址到高地址)
 
@@ -62,6 +71,7 @@ seta20.2:
 do_e820:
   # 调用传入值
   movl $0xe820, %eax              # %eax = 0xe820
+  # %edi = $e820_map + 4
   movl $e820_map, %ebx
   movl %ebx, %edi
   addl $4, %edi                   # es:edi => 返回结果的缓存区地址

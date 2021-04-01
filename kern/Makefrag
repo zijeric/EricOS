@@ -7,7 +7,7 @@ OBJDIRS += kern
 
 KERN_LDFLAGS := $(LDFLAGS) -T kern/kernel.ld -nostdlib --no-gc-sections --print-gc-sections -Map=vivek.map
 
-# entry.S 必须是第一个，这样它是文本段中的第一个代码！
+# bootstrap.S 必须是第一个，这样它就是代码段中的第一段代码！
 #
 # 为了避免不必要的代码重复，还从lib目录中使用了几个方便的源文件.
 KERN_SRCFILES :=	kern/bootstrap.S \
@@ -34,12 +34,50 @@ KERN_SRCFILES :=	kern/bootstrap.S \
 		    kern/elf_rw.c
 
 
+# Source files for LAB4
+KERN_SRCFILES +=	kern/mpentry.S \
+			kern/mpconfig.c \
+			kern/lapic.c \
+			kern/spinlock.c
+
 # 只 build 存在的文件.
 KERN_SRCFILES := $(wildcard $(KERN_SRCFILES))
 
 # 要嵌入内核的二进制程序映像.
-KERN_BINFILES := 
+# Binary files for LAB3
+KERN_BINFILES +=	user/hello \
+			user/buggyhello \
+			user/buggyhello2 \
+			user/evilhello \
+			user/testbss \
+			user/divzero \
+			user/breakpoint \
+			user/softint \
+			user/badsegment \
+			user/faultread \
+			user/faultreadkernel \
+			user/faultwrite \
+			user/faultwritekernel
 
+# Binary files for LAB4
+KERN_BINFILES +=	user/idle \
+			user/yield \
+			user/dumbfork \
+			user/stresssched \
+			user/faultdie \
+			user/faultregs \
+			user/faultalloc \
+			user/faultallocbad \
+			user/faultnostack \
+			user/faultbadhandler \
+			user/faultevilhandler \
+			user/forktree \
+			user/sendpage \
+			user/spin \
+			user/fairness \
+			user/pingpong \
+			user/pingpongs \
+			user/primes
 KERN_OBJFILES := $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES := $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))
 KERN_OBJFILES := $(patsubst $(OBJDIR)/lib/%, $(OBJDIR)/kern/%, $(KERN_OBJFILES))

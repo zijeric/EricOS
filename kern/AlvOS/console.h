@@ -1,5 +1,5 @@
-#ifndef _CONSOLE_H_
-#define _CONSOLE_H_
+#ifndef ALVOS_CONSOLE_H_
+#define ALVOS_CONSOLE_H_
 #ifndef ALVOS_KERNEL
 # error "This is a AlvOS kernel header; user programs should not #include it"
 #endif
@@ -21,4 +21,4 @@ int cons_getc(void);
 void kbd_intr(void); // irq 1
 void serial_intr(void); // irq 4
 
-#endif /* _CONSOLE_H_ */
+#endif /* ALVOS_CONSOLE_H_ */
