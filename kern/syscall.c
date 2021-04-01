@@ -419,66 +419,32 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 	{
 	case SYS_cputs:
 		sys_cputs((const char *)a1, (size_t)a2);
-		break;
-
+		return 0;
 	case SYS_cgetc:
-		result = sys_cgetc();
-		break;
-
+		return sys_cgetc();
 	case SYS_getenvid:
-		result = sys_getenvid();
-		break;
-
+		return sys_getenvid();
 	case SYS_env_destroy:
-		result = sys_env_destroy(a1);
-		break;
-
-	case SYS_page_alloc:
-		result = sys_page_alloc((envid_t)a1, (void *)a2, (int)a3);
-		break;
-
-	case SYS_page_map:
-		result = sys_page_map((envid_t)a1, (void *)a2, (envid_t)a3, (void *)a4, (int)a5);
-		break;
-
-	case SYS_page_unmap:
-		result = sys_page_unmap((envid_t)a1, (void *)a2);
-		break;
-
-	case SYS_exofork:
-		result = sys_exofork();
-		break;
-
-	case SYS_env_set_status:
-		result = sys_env_set_status((envid_t)a1, (int)a2);
-		break;
-
-	// CPU 遇到页错误时，将导致页错误的线性地址保存到 CPU 中的 CR2
-	case SYS_env_set_pgfault_upcall:
-		result = sys_env_set_pgfault_upcall((envid_t)a1, (void *)a2);
-		break;
-
-	// 通过系统调用实现 用户环境调度
+		return sys_env_destroy(a1);
 	case SYS_yield:
 		sys_yield();
-		break;
-
+	case SYS_exofork:
+		return sys_exofork();
+	case SYS_env_set_status:
+		return sys_env_set_status((envid_t)a1, (int)a2);
+	case SYS_page_alloc:
+		return sys_page_alloc((envid_t)a1, (void *)a2, (int)a3);
+	case SYS_page_map:
+		return sys_page_map((envid_t)a1, (void *)a2, (envid_t)a3, (void *)a4, (int)a5);
+	case SYS_page_unmap:
+		return sys_page_unmap((envid_t)a1, (void *)a2);
+	case SYS_env_set_pgfault_upcall:
+		return sys_env_set_pgfault_upcall((envid_t)a1, (void *)a2);
 	case SYS_ipc_try_send:
-		result = sys_ipc_try_send((envid_t)a1, (uint32_t)a2, (void *)a3, (unsigned)a4);
-		break;
-
+		return sys_ipc_try_send((envid_t)a1, (uint32_t)a2, (void *)a3, (unsigned)a4);
 	case SYS_ipc_recv:
-		result = sys_ipc_recv((void *)a1);
-		break;
-
-	// 未实现的系统调用
-	case NSYSCALLS:
-		result = -E_NO_SYS;
-		break;
-
+		return sys_ipc_recv((void *)a1);
 	default:
-		result = -E_INVAL;
-		break;
+		return -E_INVAL;
 	}
-	return result;
 }

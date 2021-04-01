@@ -957,11 +957,19 @@ void tlb_invalidate(pml4e_t *pml4e, void *va)
 }
 
 /**
+<<<<<<< HEAD
  * 可能多次调用 mmio_map_region()，每一次根据 pa 和 size，会将[pa,pa+size)映射到[base,base+size)，返回保留区域的基址
  * 若映射地址超出 MMIOLIM(0x8003c00000) 则越界；基址大小*不*一定是 PGSIZE 的倍数
  * 
  * MMIO: Memory-mapped I/O(内存映射 I/O)
  * 在 MMIO 部分物理内存固定到了某些 I/O 设备的寄存器，所以可以使用与访问内存相同的 load/store 指令来访问设备寄存器
+=======
+ * 保留 base (MMIO区域中)的 size 字节虚拟内存，会将物理页[pa,pa+size)映射到虚拟地址[base,base+size)，返回保留区域的基址
+ * 若映射地址超出 MMIOLIM 则越界；基址大小*不*一定是 PGSIZE 的倍数
+ * 
+ * MMIO: Memory-mapped IO 映射I/O
+ * 在MMIO中，一部分物理内存是硬连线到一些I/O设备的寄存器上的，所以可以使用与访问内存相同的load/store指令来访问设备寄存器
+>>>>>>> b5e09a15a83ecabea3969bbeaa16be3c047298c6
  */
 void *
 mmio_map_region(physaddr_t pa, size_t size)

@@ -177,25 +177,25 @@ void trap_init(void)
 	SETGATE(idt[T_ALIGN], trap, GD_KT, ALV_ALIGN, kern_dpl);
 	SETGATE(idt[T_MCHK], trap, GD_KT, ALV_MCHK, kern_dpl);
 	SETGATE(idt[T_SIMDERR], trap, GD_KT, ALV_SIMDERR, kern_dpl);
-
+	
 	SETGATE(idt[T_SYSCALL], interrupt, GD_KT, ALV_SYSCALL, user_dpl);
 
-	SETGATE(idt[IRQ_OFFSET + 0], interrupt, GD_KT, ALV_IRQ0, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 1], interrupt, GD_KT, ALV_IRQ1, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 2], interrupt, GD_KT, ALV_IRQ2, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 3], interrupt, GD_KT, ALV_IRQ3, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 4], interrupt, GD_KT, ALV_IRQ4, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 5], interrupt, GD_KT, ALV_IRQ5, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 6], interrupt, GD_KT, ALV_IRQ6, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 7], interrupt, GD_KT, ALV_IRQ7, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 8], interrupt, GD_KT, ALV_IRQ8, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 9], interrupt, GD_KT, ALV_IRQ9, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 10], interrupt, GD_KT, ALV_IRQ10, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 11], interrupt, GD_KT, ALV_IRQ11, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 12], interrupt, GD_KT, ALV_IRQ12, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 13], interrupt, GD_KT, ALV_IRQ13, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 14], interrupt, GD_KT, ALV_IRQ14, kern_dpl);
-	SETGATE(idt[IRQ_OFFSET + 15], interrupt, GD_KT, ALV_IRQ15, kern_dpl);
+	SETGATE(idt[32], interrupt, GD_KT, ALV_IRQ0, kern_dpl);
+	SETGATE(idt[33], interrupt, GD_KT, ALV_IRQ1, kern_dpl);
+	SETGATE(idt[34], interrupt, GD_KT, ALV_IRQ2, kern_dpl);
+	SETGATE(idt[35], interrupt, GD_KT, ALV_IRQ3, kern_dpl);
+	SETGATE(idt[36], interrupt, GD_KT, ALV_IRQ4, kern_dpl);
+	SETGATE(idt[37], interrupt, GD_KT, ALV_IRQ5, kern_dpl);
+	SETGATE(idt[38], interrupt, GD_KT, ALV_IRQ6, kern_dpl);
+	SETGATE(idt[39], interrupt, GD_KT, ALV_IRQ7, kern_dpl);
+	SETGATE(idt[40], interrupt, GD_KT, ALV_IRQ8, kern_dpl);
+	SETGATE(idt[41], interrupt, GD_KT, ALV_IRQ9, kern_dpl);
+	SETGATE(idt[42], interrupt, GD_KT, ALV_IRQ10, kern_dpl);
+	SETGATE(idt[43], interrupt, GD_KT, ALV_IRQ11, kern_dpl);
+	SETGATE(idt[44], interrupt, GD_KT, ALV_IRQ12, kern_dpl);
+	SETGATE(idt[45], interrupt, GD_KT, ALV_IRQ13, kern_dpl);
+	SETGATE(idt[46], interrupt, GD_KT, ALV_IRQ14, kern_dpl);
+	SETGATE(idt[47], interrupt, GD_KT, ALV_IRQ15, kern_dpl);
 
 	// 将配置好的 IDT 存储到 idt_pd
 	idt_pd.pd_lim = sizeof(idt) - 1;
@@ -303,7 +303,6 @@ trap_dispatch(struct Trapframe *tf)
 	{
 	// 处理页错误中断
 	case T_PGFLT:
-		// TODO
 		// 内核 -> panic；用户环境 -> 写时复制(copy on write)为用户环境分配
 		page_fault_handler(tf);
 		break;
