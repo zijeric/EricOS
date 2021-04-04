@@ -1,7 +1,7 @@
 #ifndef JOS_INC_SYSCALL_H
 #define JOS_INC_SYSCALL_H
 
-/* system call numbers */
+/* 系统调用序号 */
 enum {
 	SYS_cputs = 0,
 	SYS_cgetc,

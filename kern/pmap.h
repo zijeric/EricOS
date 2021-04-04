@@ -66,16 +66,10 @@ void *	mmio_map_region(physaddr_t pa, size_t size);
 int	user_mem_check(struct Env *env, const void *va, size_t len, int perm);
 void	user_mem_assert(struct Env *env, const void *va, size_t len, int perm);
 
-static inline ppn_t
-page2ppn(struct PageInfo *pp)
-{
-	return pp - pages;
-}
-
 static inline physaddr_t
 page2pa(struct PageInfo *pp)
 {
-	return page2ppn(pp) << PGSHIFT;
+	return (pp - pages) << PGSHIFT;
 }
 
 static inline struct PageInfo*

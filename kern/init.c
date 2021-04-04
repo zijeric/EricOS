@@ -65,6 +65,7 @@ i386_init(void)
 	boot_aps();
 
 	// Start fs.
+	// ENV_CREATE(user_testshell, ENV_TYPE_USER);
 	ENV_CREATE(fs_fs, ENV_TYPE_FS);
 
 #if defined(TEST)
@@ -169,17 +170,4 @@ dead:
 	/* break into the kernel monitor */
 	while (1)
 		monitor(NULL);
-}
-
-/* like panic, but don't */
-void
-_warn(const char *file, int line, const char *fmt,...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	cprintf("kernel warning at %s:%d: ", file, line);
-	vcprintf(fmt, ap);
-	cprintf("\n");
-	va_end(ap);
 }

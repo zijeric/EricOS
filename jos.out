@@ -25,10 +25,10 @@ Device 1 presence: 1
 superblock is good
 3
 5
-file_open is good
-file_get_block is good
 7
 11
+file_open is good
+file_get_block is good
 13
 17
 19
@@ -193,4 +193,4 @@ file_get_block is good
 991
 997
 1009
-qemu: terminating on signal 15 from pid 8877
+qemu: terminating on signal 15 from pid 25038

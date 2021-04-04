@@ -1,8 +1,7 @@
 #
-# This makefile system follows the structuring conventions
-# recommended by Peter Miller in his excellent paper:
+# AlvOS GNUmakefile 遵循 Peter Miller 在其优秀论文中推荐的结构化约定:
 #
-#	Recursive Make Considered Harmful
+#	title: Recursive Make Considered Harmful
 #	http://aegis.sourceforge.net/auug97.pdf
 #
 OBJDIR := obj
@@ -23,93 +22,61 @@ LABSETUP ?= ./
 
 TOP = .
 
-# Cross-compiler jos toolchain
-#
-# This Makefile will automatically use the cross-compiler toolchain
-# installed as 'i386-jos-elf-*', if one exists.  If the host tools ('gcc',
-# 'objdump', and so forth) compile for a 32-bit x86 ELF target, that will
-# be detected as well.  If you have the right compiler toolchain installed
-# using a different name, set GCCPREFIX explicitly in conf/env.mk
-
-# try to infer the correct GCCPREFIX
-ifndef GCCPREFIX
-GCCPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf64-x86-64$$' >/dev/null 2>&1; \
-	then echo 'x86-64-jos-elf-'; \
-	elif objdump -i 2>&1 | grep 'elf64-x86-64' >/dev/null 2>&1; \
-	then echo ''; \
-	else echo "***" 1>&2; \
-	echo "*** Error: Couldn't find an x86-64-*-elf version of GCC/binutils." 1>&2; \
-	echo "*** Is the directory with x86-64-jos-elf-gcc in your PATH?" 1>&2; \
-	echo "*** If your x86-64-*-elf toolchain is installed with a command" 1>&2; \
-	echo "*** prefix other than 'x86-64-jos-elf-', set your GCCPREFIX" 1>&2; \
-	echo "*** environment variable to that prefix and run 'make' again." 1>&2; \
-	echo "*** To turn off this error, run 'gmake GCCPREFIX= ...'." 1>&2; \
-	echo "***" 1>&2; exit 1; fi)
-endif
-
-# try to infer the correct QEMU
 ifndef QEMU
 QEMU := $(shell if which qemu-system-x86_64 > /dev/null; \
 	then echo qemu-system-x86_64; exit; \
 	else \
 	qemu=/Applications/Q.app/Contents/MacOS/i386-softmmu.app/Contents/MacOS/i386-softmmu; \
-	if test -x $$qemu; then echo $$qemu; exit; fi; fi; \
-	echo "***" 1>&2; \
-	echo "*** Error: Couldn't find a working QEMU executable." 1>&2; \
-	echo "*** Is the directory containing the qemu binary in your PATH" 1>&2; \
-	echo "*** or have you tried setting the QEMU variable in conf/env.mk?" 1>&2; \
-	echo "***" 1>&2; exit 1)
+	if test -x $$qemu; then echo $$qemu; exit; fi; fi;)
 endif
-
-# try to generate a unique GDB port
+# 尝试生成一个唯一的 GDB 端口
 GDBPORT	:= $(shell expr `id -u` % 5000 + 25000)
 
-CC	:= $(GCCPREFIX)gcc -pipe
-AS	:= $(GCCPREFIX)as
-AR	:= $(GCCPREFIX)ar
-LD	:= $(GCCPREFIX)ld
-OBJCOPY	:= $(GCCPREFIX)objcopy
-OBJDUMP	:= $(GCCPREFIX)objdump
-NM	:= $(GCCPREFIX)nm
+CC	:= gcc -pipe
+AS	:= as
+AR	:= ar
+LD	:= ld
+OBJCOPY	:= objcopy
+OBJDUMP	:= objdump
+NM	:= nm
 
-# Native commands
+# 本机命令
 NCC	:= gcc $(CC_VER) -pipe
 NATIVE_CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -I$(TOP) -MD -Wall
 TAR	:= gtar
 PERL	:= perl
 
-# Compiler flags
-# -fno-builtin is required to avoid refs to undefined functions in the kernel.
-# Only optimize to -O1 to discourage inlining, which complicates backtraces.
+# 编译器标志
+# 必须使用 -fno-builtin 来避免对内核中未定义函数的引用
+# 为了阻止内联而只优化为 -O1，这会使回溯复杂化
 CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O0 -fno-builtin -I$(TOP) -MD
 CFLAGS += -fno-omit-frame-pointer -mno-red-zone
 CFLAGS += -Wall -Wno-format -Wno-unused -gdwarf-2 -fno-PIC -fno-stack-protector # -Werror 
 
-# Add -fno-stack-protector if the option exists.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
-# Common linker flags
+# 通用的链接器标志
 LDFLAGS := -m elf_x86_64 -z max-page-size=0x1000 --print-gc-sections
 BOOT_LDFLAGS := -m elf_i386
 
-# Linker flags for JOS user programs
+# AlvOS 用户程序的链接器标志
 ULDFLAGS := -T user/user.ld
 
 GCC_LIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 
-# Lists that the */Makefrag makefile fragments will add to
+# 列出将要添加的 */Makefrag (makefile 片段)
 OBJDIRS :=
 
-# Make sure that 'all' is the first target
+# 确保 'all' 是第一个目标
 all:
 
-# Eliminate default suffix rules
+# 消除默认后缀规则
 .SUFFIXES:
 
-# Delete target files if there is an error (or make is interrupted)
+# 如果出现错误(或make被中断)，删除目标文件
 .DELETE_ON_ERROR:
 
-# make it so that no intermediate .o files are ever deleted
+# 确保不会删除任何中间生成的 .o 文件
 .PRECIOUS: %.o $(OBJDIR)/boot/%.o $(OBJDIR)/kern/%.o \
 	   $(OBJDIR)/lib/%.o $(OBJDIR)/fs/%.o $(OBJDIR)/net/%.o \
 	   $(OBJDIR)/user/%.o
@@ -118,20 +85,18 @@ KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -DDWARF_SUPPORT -gdwarf-2 -mcmodel=large -
 BOOT_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gdwarf-2 -m32
 USER_CFLAGS := $(CFLAGS) -DJOS_USER -gdwarf-2 -mcmodel=large -m64
 
-# Update .vars.X if variable X has changed since the last make run.
+# 如果变量 X 自上次 make 运行以来发生了更改，则更新.vars.X.
 #
-# Rules that use variable X should depend on $(OBJDIR)/.vars.X.  If
-# the variable's value has changed, this will update the vars file and
-# force a rebuild of the rule that depends on it.
+# 变量 X 的规则应该依赖于 $(OBJDIR)/.vars.X
+# 如果变量的值发生了变化，就更新vars文件，并强制重新构建(Make)依赖于它的规则.
 $(OBJDIR)/.vars.%: FORCE
 	$(V)echo "$($*)" | cmp -s $@ || echo "$($*)" > $@
 .PRECIOUS: $(OBJDIR)/.vars.%
 .PHONY: FORCE
 
 
-# Include Makefrags for subdirectories
+# 包含子目录的 Makefrags
 include boot/Makefrag
-# include boot1/Makefrag
 include kern/Makefrag
 include lib/Makefrag
 include user/Makefrag
@@ -140,8 +105,10 @@ include fs/Makefrag
 
 CPUS ?= 1
 
+# 配置内核内存大小，限制为256MB
 QEMUOPTS = -m 256 -hda $(OBJDIR)/kern/kernel.img -serial mon:stdio -gdb tcp::$(GDBPORT)
 QEMUOPTS += $(shell if $(QEMU) -nographic -help | grep -q '^-D '; then echo '-D qemu.log'; fi)
+# 配置内核映像的路径，并挂载
 IMAGES = $(OBJDIR)/kern/kernel.img
 QEMUOPTS += -smp $(CPUS)
 QEMUOPTS += -hdb $(OBJDIR)/fs/fs.img
@@ -182,7 +149,7 @@ print-qemu:
 print-gdbport:
 	@echo $(GDBPORT)
 
-# For deleting the build
+# 用于删除编译结果文件
 clean:
 	rm -rf $(OBJDIR) .gdbinit jos.in qemu.log
 
@@ -254,6 +221,7 @@ run-%: prep-% pre-qemu
 # for header files included from C source files we compile,
 # and keeps those dependencies up-to-date every time we recompile.
 # See 'mergedep.pl' for more information.
+# 参考 MIT OS 源码，这种神奇的方法会自动为所编译的C源文件中包含的头文件生成makefile依赖项，并在每次重新编译时使这些依赖项保持最新
 $(OBJDIR)/.deps: $(foreach dir, $(OBJDIRS), $(wildcard $(OBJDIR)/$(dir)/*.d))
 	@mkdir -p $(@D)
 	@$(PERL) mergedep.pl $@ $^
