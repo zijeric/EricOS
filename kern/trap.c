@@ -18,15 +18,14 @@ static struct Taskstate ts;
 extern struct Segdesc gdt[];
 extern long gdt_pd;
 
-/**
- * 为了调试，print_trapframe 可以区分打印已保存的 trapframe 和打印当前 trapframe
- * 并在当前trapframe中打印一些附加信息
+/* For debugging, so print_trapframe can distinguish between printing
+ * a saved trapframe and printing the current trapframe and print some
+ * additional information in the latter case.
  */
 static struct Trapframe *last_tf;
 
-/**
- * Interrupt descriptor table.
- * 中断描述符表必须在运行时构建(不能在boot阶段)，因为移位的函数地址不能在重定位记录中表示
+/* Interrupt descriptor table.  (Must be built at run time because
+ * shifted function addresses can't be represented in relocation records.)
  */
 struct Gatedesc idt[256] = {{0}};
 struct Pseudodesc idt_pd = {0, 0};
@@ -176,7 +175,7 @@ void trap_init(void)
 	SETGATE(idt[T_ALIGN], trap, GD_KT, ALV_ALIGN, kern_dpl);
 	SETGATE(idt[T_MCHK], trap, GD_KT, ALV_MCHK, kern_dpl);
 	SETGATE(idt[T_SIMDERR], trap, GD_KT, ALV_SIMDERR, kern_dpl);
-	
+
 	SETGATE(idt[T_SYSCALL], interrupt, GD_KT, ALV_SYSCALL, user_dpl);
 
 	SETGATE(idt[32], interrupt, GD_KT, ALV_IRQ0, kern_dpl);
@@ -210,9 +209,9 @@ void trap_init_percpu(void)
 	// 为 Per-CPU 设置了 Task State Segment(TSS), TSS 描述符(各自的内核栈)
 
 	// 为了能陷入内核态加载内核栈，必须初始化并加载TSS.
-	size_t cur_cpu_id = cpunum();
-
-	thiscpu->cpu_ts.ts_esp0 = KSTACKTOP - cur_cpu_id * (KSTKSIZE + KSTKGAP);
+	int cur_cpu_id = thiscpu->cpu_id;
+	size_t kstacktop_ncpus = KSTACKTOP - cur_cpu_id * (KSTKSIZE + KSTKGAP);
+	thiscpu->cpu_ts.ts_esp0 = kstacktop_ncpus;
 	// 1.初始化 GDT 中的 TSS(kern/env.c 中配置为 NULL)，Per-CPU 的内核栈地址
 	// 用户环境中断被触发之后，硬件会自动切换到 Per-CPU 对应的内核栈
 	SETTSS((struct SystemSegdesc64 *)(&gdt[(GD_TSS0 >> 3) + 2 * cur_cpu_id]),
@@ -220,7 +219,6 @@ void trap_init_percpu(void)
 		   (uint64_t)(&thiscpu->cpu_ts),
 		   sizeof(struct Taskstate),
 		   0);
-
 	// 2.加载 IDT 和 TSS，IDT 依赖于 TSS，所以先加载TSS
 	// 3.加载 TSS 选择子(与其他段选择子相似，将[低三位特殊位]设置为0)
 	ltr(GD_TSS0 + ((2 * cur_cpu_id << 3) & (~0x7)));
@@ -292,32 +290,48 @@ void print_regs(struct PushRegs *regs)
 	cprintf("  rax  0x%08x\n", regs->reg_rax);
 }
 
+
 /**
  * 处理环境产生的异常(分发异常到对应的处理函数).
  */
 static void
 trap_dispatch(struct Trapframe *tf)
 {
-	switch (tf->tf_trapno)
-	{
-	// 处理页错误中断
-	case T_PGFLT:
-		// 内核 -> panic；用户环境 -> 写时复制(copy on write)为用户环境分配
-		page_fault_handler(tf);
-		break;
-
 	// 处理虚假中断.
 	// 硬件有时会因为IRQ线路上的噪声或其他原因而引起这些问题(不关心，不处理).
-	case IRQ_OFFSET + IRQ_SPURIOUS:
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_SPURIOUS)
+	{
 		cprintf("Spurious interrupt on irq 7\n");
 		print_trapframe(tf);
-		break;
+		return;
+	}
 
 	// 处理时钟中断.
-	case IRQ_OFFSET + IRQ_TIMER:
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER)
+	{
 		// 必须调用 lapic_eoi() 确认中断，才能 sched_yield() 调度环境
 		lapic_eoi();
 		sched_yield();
+		return;
+	}
+
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_KBD)
+	{
+		kbd_intr();
+		return;
+	}
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_SERIAL)
+	{
+		serial_intr();
+		return;
+	}
+
+	// 处理页错误中断
+	switch (tf->tf_trapno)
+	{
+	case T_PGFLT:
+		// 内核 -> panic；用户环境 -> 写时复制(copy on write)为用户环境分配
+		page_fault_handler(tf);
 		break;
 
 	// 处理断点
@@ -500,3 +514,4 @@ void page_fault_handler(struct Trapframe *tf)
 	print_trapframe(tf);
 	env_destroy(curenv);
 }
+

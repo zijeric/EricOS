@@ -129,8 +129,8 @@ _alltraps:
 
 	# 2.加载 GD_KD 到 ds寄存器 和 es寄存器
 	movq $GD_KD,%rax
-	mov %rax,%ds
-	mov %rax,%es
+	movq %rax,%ds
+	movq %rax,%es
 
 	# 3.为 trap(struct Trapframe *tf) 传递一个指向Trapframe的指针
 	movq %rsp,%rdi
