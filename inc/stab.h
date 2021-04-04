@@ -1,15 +1,16 @@
-#ifndef ALVOS_STAB_H
-#define ALVOS_STAB_H
-#include "inc/types.h"
+#ifndef JOS_STAB_H
+#define JOS_STAB_H
+#include <inc/types.h>
 
 // <inc/stab.h>
-// STABS 调试信息
+// STABS debugging info
 
-// AlvOS 内核调试器可以理解一些 STABS 格式的调试信息
-// 有关 STABS 格式的更多信息，请参见http://sourceware.org/gdb/onlinedocs/stabs.html
+// The JOS kernel debugger can understand some debugging information
+// in the STABS format.  For more information on this format, see
+// http://sourceware.org/gdb/onlinedocs/stabs.html
 
-// 下面的常量定义了各种调试器和编译器使用的一些符号类型
-// AlvOS 使用N_SO、N_SOL、N_FUN和N_SLINE类型。
+// The constants below define some symbol types used by various debuggers
+// and compilers.  JOS uses the N_SO, N_SOL, N_FUN, and N_SLINE types.
 
 #define	N_GSYM		0x20	// global symbol
 #define	N_FNAME		0x22	// F77 function name
@@ -38,7 +39,7 @@
 #define	N_ECOML		0xe8	// end common (local name)
 #define	N_LENG		0xfe	// length of preceding entry
 
-// STABS 表项的格式翻译为结构体如下.
+// Entries in the STABS table are formatted as follows.
 struct Stab {
 	uint32_t n_strx;	// index into string table of name
 	uint8_t n_type;         // type of symbol
@@ -47,4 +48,4 @@ struct Stab {
 	uint32_t n_value;	// value of symbol
 };
 
-#endif /* !ALVOS_STAB_H */
+#endif /* !JOS_STAB_H */

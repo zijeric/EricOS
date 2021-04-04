@@ -1,5 +1,5 @@
 /obj
-/.gdbinit
+/.gdbinit*
 /wget.log
 /qemu.pcap
 /qemu.pcap.*
@@ -12,4 +12,3 @@
 /init.*
 /__pycache__
 stabs.txt
-/mergedep.pl

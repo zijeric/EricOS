@@ -1,115 +1,151 @@
 #
-# AlvOS GNUmakefile 遵循 Peter Miller 在其优秀论文中推荐的结构化约定:
+# This makefile system follows the structuring conventions
+# recommended by Peter Miller in his excellent paper:
 #
-#	title: Recursive Make Considered Harmful
+#	Recursive Make Considered Harmful
 #	http://aegis.sourceforge.net/auug97.pdf
 #
 OBJDIR := obj
 
 # Run 'make V=1' to turn on verbose commands, or 'make V=0' to turn them off.
-# ifeq ($(V),1)
-# override V =
-# endif
-# ifeq ($(V),0)
-# override V = @
-# endif
-# berbose cmds
-V = @
+ifeq ($(V),1)
+override V =
+endif
+ifeq ($(V),0)
+override V = @
+endif
+
+-include conf/lab.mk
+
+-include conf/env.mk
+
+LABSETUP ?= ./
 
 TOP = .
 
+# Cross-compiler jos toolchain
+#
+# This Makefile will automatically use the cross-compiler toolchain
+# installed as 'i386-jos-elf-*', if one exists.  If the host tools ('gcc',
+# 'objdump', and so forth) compile for a 32-bit x86 ELF target, that will
+# be detected as well.  If you have the right compiler toolchain installed
+# using a different name, set GCCPREFIX explicitly in conf/env.mk
+
+# try to infer the correct GCCPREFIX
+ifndef GCCPREFIX
+GCCPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf64-x86-64$$' >/dev/null 2>&1; \
+	then echo 'x86-64-jos-elf-'; \
+	elif objdump -i 2>&1 | grep 'elf64-x86-64' >/dev/null 2>&1; \
+	then echo ''; \
+	else echo "***" 1>&2; \
+	echo "*** Error: Couldn't find an x86-64-*-elf version of GCC/binutils." 1>&2; \
+	echo "*** Is the directory with x86-64-jos-elf-gcc in your PATH?" 1>&2; \
+	echo "*** If your x86-64-*-elf toolchain is installed with a command" 1>&2; \
+	echo "*** prefix other than 'x86-64-jos-elf-', set your GCCPREFIX" 1>&2; \
+	echo "*** environment variable to that prefix and run 'make' again." 1>&2; \
+	echo "*** To turn off this error, run 'gmake GCCPREFIX= ...'." 1>&2; \
+	echo "***" 1>&2; exit 1; fi)
+endif
+
+# try to infer the correct QEMU
 ifndef QEMU
 QEMU := $(shell if which qemu-system-x86_64 > /dev/null; \
 	then echo qemu-system-x86_64; exit; \
-	if test -x $$qemu; then echo $$qemu; exit; fi; fi;)
+	else \
+	qemu=/Applications/Q.app/Contents/MacOS/i386-softmmu.app/Contents/MacOS/i386-softmmu; \
+	if test -x $$qemu; then echo $$qemu; exit; fi; fi; \
+	echo "***" 1>&2; \
+	echo "*** Error: Couldn't find a working QEMU executable." 1>&2; \
+	echo "*** Is the directory containing the qemu binary in your PATH" 1>&2; \
+	echo "*** or have you tried setting the QEMU variable in conf/env.mk?" 1>&2; \
+	echo "***" 1>&2; exit 1)
 endif
 
-# 尝试生成一个唯一的 GDB 端口
+# try to generate a unique GDB port
 GDBPORT	:= $(shell expr `id -u` % 5000 + 25000)
 
-CC	:= gcc -pipe
-AS	:= as
-AR	:= ar
-LD	:= ld
-OBJCOPY	:= objcopy
-OBJDUMP	:= objdump
-NM	:= nm
+CC	:= $(GCCPREFIX)gcc -pipe
+AS	:= $(GCCPREFIX)as
+AR	:= $(GCCPREFIX)ar
+LD	:= $(GCCPREFIX)ld
+OBJCOPY	:= $(GCCPREFIX)objcopy
+OBJDUMP	:= $(GCCPREFIX)objdump
+NM	:= $(GCCPREFIX)nm
 
-# 本机命令
+# Native commands
 NCC	:= gcc $(CC_VER) -pipe
-NATIVE_CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -I$(TOP) -MD -Wall -MM ./inc/AlvOS
+NATIVE_CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -I$(TOP) -MD -Wall
 TAR	:= gtar
 PERL	:= perl
 
-# 编译器标志
-# 必须使用 -fno-builtin 来避免对内核中未定义函数的引用
-# 为了阻止内联而只优化为 -O1，这会使回溯复杂化
+# Compiler flags
+# -fno-builtin is required to avoid refs to undefined functions in the kernel.
+# Only optimize to -O1 to discourage inlining, which complicates backtraces.
 CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O0 -fno-builtin -I$(TOP) -MD
 CFLAGS += -fno-omit-frame-pointer -mno-red-zone
-CFLAGS += -Wall -Wno-format -Wno-unused -Werror -gdwarf-2 -fno-PIC -fno-stack-protector
+CFLAGS += -Wall -Wno-format -Wno-unused -gdwarf-2 -fno-PIC -fno-stack-protector # -Werror 
 
+# Add -fno-stack-protector if the option exists.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
-# 通用的链接器标志
+# Common linker flags
 LDFLAGS := -m elf_x86_64 -z max-page-size=0x1000 --print-gc-sections
 BOOT_LDFLAGS := -m elf_i386
 
-# AlvOS 用户程序的链接器标志
+# Linker flags for JOS user programs
 ULDFLAGS := -T user/user.ld
 
 GCC_LIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 
-# 列出将要添加的 */Makefrag (makefile 片段)
+# Lists that the */Makefrag makefile fragments will add to
 OBJDIRS :=
 
-# 确保 'all' 是第一个目标
+# Make sure that 'all' is the first target
 all:
 
-# 消除默认后缀规则
+# Eliminate default suffix rules
 .SUFFIXES:
 
-# 如果出现错误(或make被中断)，删除目标文件
+# Delete target files if there is an error (or make is interrupted)
 .DELETE_ON_ERROR:
 
-# 确保不会删除任何中间生成的 .o 文件
+# make it so that no intermediate .o files are ever deleted
 .PRECIOUS: %.o $(OBJDIR)/boot/%.o $(OBJDIR)/kern/%.o \
 	   $(OBJDIR)/lib/%.o $(OBJDIR)/fs/%.o $(OBJDIR)/net/%.o \
 	   $(OBJDIR)/user/%.o
 
-KERN_CFLAGS := $(CFLAGS) -DALVOS_KERNEL -DDWARF_SUPPORT -gdwarf-2 -mcmodel=large -m64
-BOOT_CFLAGS := $(CFLAGS) -DALVOS_KERNEL -gdwarf-2 -m32
-USER_CFLAGS := $(CFLAGS) -DALVOS_USER -gdwarf-2 -mcmodel=large -m64
+KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -DDWARF_SUPPORT -gdwarf-2 -mcmodel=large -m64
+BOOT_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gdwarf-2 -m32
+USER_CFLAGS := $(CFLAGS) -DJOS_USER -gdwarf-2 -mcmodel=large -m64
 
-# 如果变量 X 自上次 make 运行以来发生了更改，则更新.vars.X.
+# Update .vars.X if variable X has changed since the last make run.
 #
-# 变量 X 的规则应该依赖于 $(OBJDIR)/.vars.X
-# 如果变量的值发生了变化，就更新vars文件，并强制重新构建(Make)依赖于它的规则.
+# Rules that use variable X should depend on $(OBJDIR)/.vars.X.  If
+# the variable's value has changed, this will update the vars file and
+# force a rebuild of the rule that depends on it.
 $(OBJDIR)/.vars.%: FORCE
 	$(V)echo "$($*)" | cmp -s $@ || echo "$($*)" > $@
 .PRECIOUS: $(OBJDIR)/.vars.%
 .PHONY: FORCE
 
 
-# 包含子目录的 Makefrags
+# Include Makefrags for subdirectories
 include boot/Makefrag
+# include boot1/Makefrag
 include kern/Makefrag
 include lib/Makefrag
 include user/Makefrag
+include fs/Makefrag
 
 
 CPUS ?= 1
 
-PORT7	:= $(shell expr $(GDBPORT) + 1)
-PORT80	:= $(shell expr $(GDBPORT) + 2)
-
-# 配置内核内存大小，限制为256MB
 QEMUOPTS = -m 256 -hda $(OBJDIR)/kern/kernel.img -serial mon:stdio -gdb tcp::$(GDBPORT)
 QEMUOPTS += $(shell if $(QEMU) -nographic -help | grep -q '^-D '; then echo '-D qemu.log'; fi)
-# 配置内核映像的路径，并挂载
 IMAGES = $(OBJDIR)/kern/kernel.img
 QEMUOPTS += -smp $(CPUS)
-QEMUOPTS += -net user -net nic,model=e1000 -redir tcp:$(PORT7)::7 \
-	   -redir tcp:$(PORT80)::80 -redir udp:$(PORT7)::7 -net dump,file=qemu.pcap
+QEMUOPTS += -hdb $(OBJDIR)/fs/fs.img
+IMAGES += $(OBJDIR)/fs/fs.img
 QEMUOPTS += $(QEMUEXTRA)
 
 
@@ -118,8 +154,6 @@ QEMUOPTS += $(QEMUEXTRA)
 	sed -e "s/localhost:1234/localhost:$(GDBPORT)/" -e "s/jumpto_longmode/*0x$(LONGMODE)/" < $^ > $@
 
 pre-qemu: .gdbinit
-#	QEMU doesn't truncate the pcap file.  Work around this.
-	@rm -f qemu.pcap
 
 qemu: $(IMAGES) pre-qemu
 	$(QEMU) $(QEMUOPTS)
@@ -148,13 +182,13 @@ print-qemu:
 print-gdbport:
 	@echo $(GDBPORT)
 
-# 用于删除编译结果文件
+# For deleting the build
 clean:
-	rm -rf $(OBJDIR) .gdbinit alvos.in qemu.log
+	rm -rf $(OBJDIR) .gdbinit jos.in qemu.log
 
 realclean: clean
 	rm -rf lab$(LAB).tar.gz \
-		alvos.out $(wildcard alvos.out.*) \
+		jos.out $(wildcard jos.out.*) \
 		qemu.pcap $(wildcard qemu.pcap.*)
 
 distclean: realclean
@@ -164,8 +198,42 @@ ifneq ($(V),@)
 GRADEFLAGS += -v
 endif
 
+grade:
+	@echo $(MAKE) clean
+	@$(MAKE) clean || \
+	  (echo "'make clean' failed.  HINT: Do you have another running instance of JOS?" && exit 1)
+	./grade-lab$(LAB) $(GRADEFLAGS)
+
+handin: realclean
+	@if [ `git status --porcelain| wc -l` != 0 ] ; then echo "\n\n\n\n\t\tWARNING: YOU HAVE UNCOMMITTED CHANGES\n\n    Consider committing any pending changes and rerunning make handin.\n\n\n\n"; fi
+	git tag -f -a lab$(LAB)-handin -m "Lab$(LAB) Handin"
+	git push --tags handin
+
+handin-check:
+	@if test "$$(git symbolic-ref HEAD)" != refs/heads/lab$(LAB); then \
+		git branch; \
+		read -p "You are not on the lab$(LAB) branch.  Hand-in the current branch? [y/N] " r; \
+		test "$$r" = y; \
+	fi
+	@if ! git diff-files --quiet || ! git diff-index --quiet --cached HEAD; then \
+		git status; \
+		echo; \
+		echo "You have uncomitted changes.  Please commit or stash them."; \
+		false; \
+	fi
+	@if test -n "`git ls-files -o --exclude-standard`"; then \
+		git status; \
+		read -p "Untracked files will not be handed in.  Continue? [y/N] " r; \
+		test "$$r" = y; \
+	fi
+
+tarball: handin-check
+	git archive --format=tar HEAD | gzip > lab$(LAB)-handin.tar.gz
+
+handin-prep:
+	@./handin-prep
+
 # For test runs
-prep-net_%: override INIT_CFLAGS+=-DTEST_NO_NS
 
 prep-%:
 	$(V)$(MAKE) "INIT_CFLAGS=${INIT_CFLAGS} -DTEST=`case $* in *_*) echo $*;; *) echo user_$*;; esac`" $(IMAGES)
@@ -182,24 +250,10 @@ run-%-nox: prep-% pre-qemu
 run-%: prep-% pre-qemu
 	$(QEMU) $(QEMUOPTS)
 
-# For network connections
-which-ports:
-	@echo "Local port $(PORT7) forwards to port 7 (echo server)"
-	@echo "Local port $(PORT80) forwards to port 80 (web server)"
-
-nc-80:
-	nc localhost $(PORT80)
-
-nc-7:
-	nc localhost $(PORT7)
-
-telnet-80:
-	telnet localhost $(PORT80)
-
-telnet-7:
-	telnet localhost $(PORT7)
-
-# 参考 MIT JOS 源码，这种神奇的方法会自动为所编译的C源文件中包含的头文件生成makefile依赖项，并在每次重新编译时使这些依赖项保持最新
+# This magic automatically generates makefile dependencies
+# for header files included from C source files we compile,
+# and keeps those dependencies up-to-date every time we recompile.
+# See 'mergedep.pl' for more information.
 $(OBJDIR)/.deps: $(foreach dir, $(OBJDIRS), $(wildcard $(OBJDIR)/$(dir)/*.d))
 	@mkdir -p $(@D)
 	@$(PERL) mergedep.pl $@ $^
@@ -210,4 +264,4 @@ always:
 	@:
 
 .PHONY: all always \
-	tarball clean realclean distclean
+	handin tarball clean realclean distclean grade handin-prep handin-check

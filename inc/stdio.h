@@ -1,7 +1,7 @@
-#ifndef ALVOS_INC_STDIO_H
-#define ALVOS_INC_STDIO_H
+#ifndef JOS_INC_STDIO_H
+#define JOS_INC_STDIO_H
 
-#include "inc/stdarg.h"
+#include <inc/stdarg.h>
 
 #ifndef NULL
 #define NULL	((void *) 0)
@@ -30,4 +30,4 @@ int	vfprintf(int fd, const char *fmt, va_list);
 // lib/readline.c
 char*	readline(const char *prompt);
 
-#endif /* !ALVOS_INC_STDIO_H */
+#endif /* !JOS_INC_STDIO_H */

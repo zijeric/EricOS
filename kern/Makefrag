@@ -1,17 +1,20 @@
 #
-# AlvOS 内核的 Makefile 片段.
-# 这不是一个完整的 makefile; 必须在 GNUmakefile 所在的最上级目录中运行 GNU make
+# Makefile fragment for JOS kernel.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
 #
 
 OBJDIRS += kern
 
 KERN_LDFLAGS := $(LDFLAGS) -T kern/kernel.ld -nostdlib --no-gc-sections --print-gc-sections -Map=vivek.map
 
-# bootstrap.S 必须是第一个，这样它就是代码段中的第一段代码！
+# entry.S must be first, so that it's the first code in the text segment!!!
 #
-# 为了避免不必要的代码重复，还从lib目录中使用了几个方便的源文件.
-KERN_SRCFILES :=	kern/bootstrap.S \
-            kern/entry.S \
+# We also snatch the use of a couple handy source files
+# from the lib directory, to avoid gratuitous code duplication.
+KERN_SRCFILES :=	kern/entry.S \
+            kern/bootstrap.S \
 			kern/init.c \
 			kern/console.c \
 			kern/monitor.c \
@@ -40,25 +43,11 @@ KERN_SRCFILES +=	kern/mpentry.S \
 			kern/lapic.c \
 			kern/spinlock.c
 
-# 只 build 存在的文件.
+# Only build files if they exist.
 KERN_SRCFILES := $(wildcard $(KERN_SRCFILES))
 
-# 要嵌入内核的二进制程序映像.
-# Binary files for LAB3
-KERN_BINFILES +=	user/hello \
-			user/buggyhello \
-			user/buggyhello2 \
-			user/evilhello \
-			user/testbss \
-			user/divzero \
-			user/breakpoint \
-			user/softint \
-			user/badsegment \
-			user/faultread \
-			user/faultreadkernel \
-			user/faultwrite \
-			user/faultwritekernel
-
+# Binary program images to embed within the kernel.
+KERN_BINFILES :=	user/hello
 # Binary files for LAB4
 KERN_BINFILES +=	user/idle \
 			user/yield \
@@ -78,13 +67,29 @@ KERN_BINFILES +=	user/idle \
 			user/pingpong \
 			user/pingpongs \
 			user/primes
+# Binary files for LAB5
+KERN_BINFILES +=	user/testfilero \
+			user/spawnhello \
+			user/icode \
+			fs/fs
+
+# Binary files for LAB5
+KERN_BINFILES +=	user/testpteshare \
+			user/testfdsharing \
+			user/testpipe \
+			user/testpiperace \
+			user/testpiperace2 \
+			user/primespipe \
+			user/testkbd \
+			user/testshell
+
 KERN_OBJFILES := $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES := $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))
 KERN_OBJFILES := $(patsubst $(OBJDIR)/lib/%, $(OBJDIR)/kern/%, $(KERN_OBJFILES))
 
 KERN_BINFILES := $(patsubst %, $(OBJDIR)/%, $(KERN_BINFILES))
 
-# 表明如何 build 内核目标文件
+# How to build kernel object files
 $(OBJDIR)/kern/%.o: kern/%.c $(OBJDIR)/.vars.KERN_CFLAGS
 	@echo + cc $<
 	@mkdir -p $(@D)
@@ -105,11 +110,11 @@ $(OBJDIR)/kern/%.o: lib/%.c $(OBJDIR)/.vars.KERN_CFLAGS
 	@mkdir -p $(@D)
 	$(V)$(CC) -nostdinc $(KERN_CFLAGS) -c -o $@ $<
 
-# kern/init 的特殊标志
+# Special flags for kern/init
 $(OBJDIR)/kern/init.o: override KERN_CFLAGS+=$(INIT_CFLAGS)
 $(OBJDIR)/kern/init.o: $(OBJDIR)/.vars.INIT_CFLAGS
 
-# 表明如何 build 内核本身
+# How to build the kernel itself
 $(OBJDIR)/kern/kernel: $(KERN_OBJFILES) $(KERN_BINFILES) kern/kernel.ld \
 	  $(OBJDIR)/.vars.KERN_LDFLAGS
 	@echo + ld $@
@@ -117,7 +122,7 @@ $(OBJDIR)/kern/kernel: $(KERN_OBJFILES) $(KERN_BINFILES) kern/kernel.ld \
 	$(V)$(OBJDUMP) -S $@ > $@.asm
 	$(V)$(NM) -n $@ > $@.sym
 
-# 如何 build 内核磁盘映像
+# How to build the kernel disk image
 $(OBJDIR)/kern/kernel.img: $(OBJDIR)/kern/kernel $(OBJDIR)/boot/boot
 	@echo + mk $@
 	$(V)dd if=/dev/zero of=$(OBJDIR)/kern/kernel.img~ bs=512 count=20000 2>/dev/null
@@ -127,8 +132,8 @@ $(OBJDIR)/kern/kernel.img: $(OBJDIR)/kern/kernel $(OBJDIR)/boot/boot
 
 all: $(OBJDIR)/kern/kernel.img
 
-grub: $(OBJDIR)/alvos-grub
+grub: $(OBJDIR)/jos-grub
 
-$(OBJDIR)/alvos-grub: $(OBJDIR)/kern/kernel
+$(OBJDIR)/jos-grub: $(OBJDIR)/kern/kernel
 	@echo + oc $@
 	$(V)$(OBJCOPY) --adjust-vma=0x10000000 $^ $@

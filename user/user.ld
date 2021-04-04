@@ -1,5 +1,5 @@
-/* AlvOS 用户态程序的链接器脚本.
-   参考 GNU ld 'info' 手册 ("info ld").  */
+/* Simple linker script for JOS user-level programs.
+   See the GNU ld 'info' manual ("info ld") to learn the syntax. */
 
 OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64", "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
@@ -7,40 +7,64 @@ ENTRY(_start)
 
 SECTIONS
 {
-    /* "."是定位器，用于调整程序被链接到内存的偏移位置(地址)，将 bootstrap.o 位置设置在地址 0x800020(线性地址=加载地址) */
+	/* Load programs at this address: "." means the current address */
 	. = 0x800020;
 
-	/* 代码段 */
 	.text : {
 		*(.text .stub .text.* .gnu.linkonce.t.*)
 	}
 
-    /* PROVIDE(symbol = expression) 初始化etext[]，etext标识符代表 .text 程序段的末尾线性地址 */
-	PROVIDE(etext = .);
+	PROVIDE(etext = .);	/* Define the 'etext' symbol to this value */
 
-    /* .rodata 只读数据段位于 .text 代码段之后 */
 	.rodata : {
 		*(.rodata .rodata.* .gnu.linkonce.r.*)
 	}
 
-	/* 按4096字节对齐，允许将数据段的地址调整到下一页 */
+	/* Adjust the address for the data segment to the next page */
 	. = ALIGN(0x1000);
 
-	/* 非零数据段 */
 	.data : {
 		*(.data)
 	}
 
-    /* edata标识符代表 .data 数据段的末尾线性地址 */
 	PROVIDE(edata = .);
 
-    /* (静态/未初始化/初始值为0)数据段 */
 	.bss : {
 		*(.bss)
 	}
 
-    /* end标识符代表 用户程序 的末尾线性地址 */
 	PROVIDE(end = .);
+
+
+	/* Place debugging symbols so that they can be found by
+	 * the kernel debugger.
+	 * Specifically, the four words at 0x200000 mark the beginning of
+	 * the stabs, the end of the stabs, the beginning of the stabs
+	 * string table, and the end of the stabs string table, respectively.
+	 */
+
+	/* .stab_info 0x200000 : { */
+	/* 	QUAD(__STAB_BEGIN__); */
+	/* 	QUAD(__STAB_END__); */
+	/* 	QUAD(__STABSTR_BEGIN__); */
+	/* 	QUAD(__STABSTR_END__); */
+	/* } */
+
+	/* .stab : { */
+	/* 	__STAB_BEGIN__ = DEFINED(__STAB_BEGIN__) ? __STAB_BEGIN__ : .; */
+	/* 	*(.stab); */
+	/* 	__STAB_END__ = DEFINED(__STAB_END__) ? __STAB_END__ : .; */
+	/* 	BYTE(0)		/1* Force the linker to allocate space */
+	/* 			   for this section *1/ */
+	/* } */
+
+	/* .stabstr : { */
+	/* 	__STABSTR_BEGIN__ = DEFINED(__STABSTR_BEGIN__) ? __STABSTR_BEGIN__ : .; */
+	/* 	*(.stabstr); */
+	/* 	__STABSTR_END__ = DEFINED(__STABSTR_END__) ? __STABSTR_END__ : .; */
+	/* 	BYTE(0)		/1* Force the linker to allocate space */
+	/* 			   for this section *1/ */
+	/* } */
 
 	/DISCARD/ : {
 		*(.note.GNU-stack .comment)

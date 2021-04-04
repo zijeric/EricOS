@@ -1,7 +1,7 @@
 // idle loop
 
-#include "inc/x86.h"
-#include "inc/lib.h"
+#include <inc/x86.h>
+#include <inc/lib.h>
 
 void
 umain(int argc, char **argv)

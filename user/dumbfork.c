@@ -1,8 +1,8 @@
 // Ping-pong a counter between two processes.
 // Only need to start one of these -- splits into two, crudely.
 
-#include "inc/string.h"
-#include "inc/lib.h"
+#include <inc/string.h>
+#include <inc/lib.h>
 
 envid_t dumbfork(void);
 
@@ -12,7 +12,7 @@ umain(int argc, char **argv)
 	envid_t who;
 	int i;
 
-	// fork 一个子环境
+	// fork a child process
 	who = dumbfork();
 
 	// print a message and yield to the other a few times

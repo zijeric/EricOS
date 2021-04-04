@@ -1,7 +1,7 @@
-#ifndef ALVOS_INC_SYSCALL_H
-#define ALVOS_INC_SYSCALL_H
+#ifndef JOS_INC_SYSCALL_H
+#define JOS_INC_SYSCALL_H
 
-/* 系统调用序号 */
+/* system call numbers */
 enum {
 	SYS_cputs = 0,
 	SYS_cgetc,
@@ -12,6 +12,7 @@ enum {
 	SYS_page_unmap,
 	SYS_exofork,
 	SYS_env_set_status,
+	SYS_env_set_trapframe,
 	SYS_env_set_pgfault_upcall,
 	SYS_yield,
 	SYS_ipc_try_send,
@@ -19,4 +20,4 @@ enum {
 	NSYSCALLS
 };
 
-#endif  /* !ALVOS_INC_SYSCALL_H */
+#endif /* !JOS_INC_SYSCALL_H */

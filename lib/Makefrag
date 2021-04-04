@@ -16,7 +16,17 @@ LIB_SRCFILES :=		$(LIB_SRCFILES) \
 			lib/fork.c \
 			lib/ipc.c
 
+LIB_SRCFILES :=		$(LIB_SRCFILES) \
+			lib/args.c \
+			lib/fd.c \
+			lib/file.c \
+			lib/fprintf.c \
+			lib/pageref.c \
+			lib/spawn.c
 
+LIB_SRCFILES :=		$(LIB_SRCFILES) \
+			lib/pipe.c \
+			lib/wait.c
 
 LIB_OBJFILES := $(patsubst lib/%.c, $(OBJDIR)/lib/%.o, $(LIB_SRCFILES))
 LIB_OBJFILES := $(patsubst lib/%.S, $(OBJDIR)/lib/%.o, $(LIB_OBJFILES))
@@ -31,6 +41,6 @@ $(OBJDIR)/lib/%.o: lib/%.S $(OBJDIR)/.vars.USER_CFLAGS
 	@mkdir -p $(@D)
 	$(V)$(CC) -nostdinc $(USER_CFLAGS) -c -o $@ $<
 
-$(OBJDIR)/lib/libAlvOS.a: $(LIB_OBJFILES)
+$(OBJDIR)/lib/libjos.a: $(LIB_OBJFILES)
 	@echo + ar $@
 	$(V)$(AR) r $@ $(LIB_OBJFILES)

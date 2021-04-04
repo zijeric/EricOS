@@ -1,153 +1,104 @@
-#include "inc/mmu.h"
-#include "inc/memlayout.h"
-#include "kern/macro.h"
+#include <inc/mmu.h>
+#include <inc/memlayout.h>
+#include <kern/macro.h>
 
-// 调用具体的页错误处理函数，通过在 trap.c push 的 UTrapframe 结构变换到调用缺页处理环境的上下文
-// 首先变换到异常栈(调用缺页处理的栈，佳能保存的缺页处理环境的%rip push 进栈)，空出一个字(4-Byte)
-// 
+// Page fault upcall entrypoint.
 
-// 页错误处理的关键，用户态页错误处理函数的入口
-// - 调用具体的页错误处理函数(由 lib/pgfault.c 的代码注册到环境结构的字段)，返回执行引起页错误的代码
-// - 处理后直接返回不必经过内核，因为在上文 page_fault_handler() 压入栈的 UTrapframe 保存了出错前环境的状态
-
-// 当页错误发生时，内核将我们的 %rsp 切换到用户异常栈(非嵌套页错误)，然后将一个 UTrapframe push 进栈传递给用户
-// 如果这是一个嵌套错误，递归调用时，内核将在用户异常栈 %esp 之上为我们保留 8-Byte(存储 %rip)
-// 然后，我们在 c 代码中调用由全局变量 _pgfault_handler 指向的页错误处理函数.
-/*
-	UTrapframe 在栈(UXSTACKTOP)中结构：
-			.				<-- UXSTACKTOP
-			.
-			.				<-- trap-time(页错误前) %rsp
-		(reserved 8-Byte)嵌套页错误
-		trap-time rsp
-		trap-time eflags
-		trap-time rip
-		trap-time rax    <-- start of struct PushRegs
-		trap-time rbx
-		trap-time rcx
-		trap-time rdx
-		trap-time rbp
-		trap-time rdi
-		trap-time rsi
-		trap-time r8
-		trap-time r9
-		trap-time r10
-		trap-time r11
-		trap-time r12
-		trap-time r13
-		trap-time r14
-		trap-time r15    <-- end of struct PushRegs
-		utf_err (error code)
-		utf_fault_va         <-- %rsp when handler is run
-*/
+// This is where we ask the kernel to redirect us to whenever we cause
+// a page fault in user space (see the call to sys_set_pgfault_handler
+// in pgfault.c).
+//
+// When a page fault actually occurs, the kernel switches our RSP to
+// point to the user exception stack if we're not already on the user
+// exception stack, and then it pushes a UTrapframe onto our user
+// exception stack:
+//
+//	trap-time rsp
+//	trap-time eflags
+//	trap-time rip
+//	utf_regs.reg_rax
+//	...
+//	utf_regs.reg_rsi
+//	utf_regs.reg_rdi
+//	utf_err (error code)
+//	utf_fault_va            <-- %rsp
+//
+// If this is a recursive fault, the kernel will reserve for us a
+// blank word above the trap-time esp for scratch work when we unwind
+// the recursive call.
+//
+// We then have call up to the appropriate page fault handler in C
+// code, pointed to by the global variable '_pgfault_handler'.
 
 .text
 .globl _pgfault_upcall
 _pgfault_upcall:
-
-	// 调用C代码中的页错误处理函数.
-	// 函数参数: 指向 UTrapframe 的指针
-
-	// 通过 %rdi 传递函数参数
-	movq  %rsp, %rdi
+	// Call the C page fault handler.
+	// function argument: pointer to UTF
+	
+	movq  %rsp,%rdi                // passing the function argument in rdi
 	movabs _pgfault_handler, %rax
 	call *%rax
 
-	/*
-		已经从C代码的页错误处理函数返回(栈平衡)，为了返回执行页错误前的指令，push trap-time %rip 到用户异常栈上
-		但是，不能直接从用户异常栈返回(jmp/ret): 必须恢复 trap-time 的环境状态
-		因此，push trap-time %rip 到 trap-time 栈上!
-		接下来，我们将切换到该栈并调用 ret，它将把 %rip 恢复到页错误前的值
-		在用户异常栈上出现嵌套页错误的时 ...
+	// Now the C page fault handler has returned and you must return
+	// to the trap time state.
+	// Push trap-time %eip onto the trap-time stack.
+	//
+	// Explanation:
+	//   We must prepare the trap-time stack for our eventual return to
+	//   re-execute the instruction that faulted.
+	//   Unfortunately, we can't return directly from the exception stack:
+	//   We can't call 'jmp', since that requires that we load the address
+	//   into a register, and all registers must have their trap-time
+	//   values after the return.
+	//   We can't call 'ret' from the exception stack either, since if we
+	//   did, %esp would have the wrong value.
+	//   So instead, we push the trap-time %eip onto the *trap-time* stack!
+	//   Below we'll switch to that stack and call 'ret', which will
+	//   restore %eip to its pre-fault value.
+	//
+	//   In the case of a recursive fault on the exception stack,
+	//   note that the word we're pushing now will fit in the
+	//   blank word that the kernel reserved for us.
+	//
+	// Throughout the remaining code, think carefully about what
+	// registers are available for intermediate calculations.  You
+	// may find that you have to rearrange your code in non-obvious
+	// ways as registers become unavailable as scratch space.
+	//
+	// LAB 4: Your code here.
 
-		UTrapframe 在栈(UXSTACKTOP)中结构：
-				.				<-- UXSTACKTOP
-				.
-				.				<-- trap-time(页错误前) %rsp
-			(reserved 8-Byte)嵌套页错误
-			trap-time rsp
-			trap-time eflags
-			trap-time rip
-			trap-time rax    <-- start of struct PushRegs
-			trap-time rbx
-			trap-time rcx
-			trap-time rdx
-			trap-time rbp
-			trap-time rdi
-			trap-time rsi
-			trap-time r8
-			trap-time r9
-			trap-time r10
-			trap-time r11
-			trap-time r12
-			trap-time r13
-			trap-time r14
-			trap-time r15    <-- end of struct PushRegs
-			utf_err (error code)
-			utf_fault_va         <-- %rsp when handler is run
-
-			%rsp 指向 utf_fault_va,
-			fault_va: 8-Byte,
-			utf_err: 8-Byte,
-			regs: 15*8 = 120-Byte,
-			eflags: 8-Byte,
-			rip: 8-Byte
-	*/
-
-	addq $16, %rsp	/* 跳过用户异常栈中的 utf_fault_va 和 utf_err(不需要) */
+	addq $16,%rsp /* to skip fault_va and error code (not needed) */
 	
-	/* 用户异常栈: %rsp 指向 end of struct PushRegs */
+	/* from rsp which is pointing to fault_va which is the 8 for fault_va, 8 for error_code, 120 positions is occupied by regs, 8 for eflags and 8 for rip */
 	
-	movq 120(%rsp), %r10	/* %r10 = %rip */
-	movq 136(%rsp), %r11	/* %r11 = %rsp */
+	movq 120(%rsp), %r10 /*RIP*/
+	movq 136(%rsp), %r11 /*RSP*/
+	
+	subq $8, %r11  /*to push the value of the rip to timetrap rsp, subtract and then push*/
+	movq %r10, (%r11) /*transfer RIP to the trap time RSP% */
+	movq %r11, 136(%rsp)  /*Putting the RSP back in the right place*/
 
-	subq $8, %r11			/* %r11(trap-time %rsp) - 8 */
-	movq %r10, (%r11)		/* %r11(trap-time %rsp) 指向的值为 %rip */
-	movq %r11, 136(%rsp)	/* 更新 trap-time %rsp 的值 */
-	// 若是嵌套页错误将会覆盖原来的 trap-time rsp
-	// 若是非嵌套，则 %r11 覆盖上一个指令的 %rip，并不会出错
+	// Restore the trap-time registers.  After you do this, you
+	// can no longer modify any general-purpose registers.
+	// LAB 4: Your code here.
+	
+	POPA_ /* already skipped the fault_va and error_code previously by adding 16, so just pop using the macro*/
 
-	/*	此时的用户异常栈(嵌套)：
-		
-		-------------+		<-- trap-time %rsp (former)
-		trap-time rip 
-		-------------+		<-- %r11(trap-time %rsp - 8)
-		trap-time rsp-8
-		trap-time eflags
-		trap-time rip
+	// Restore eflags from the stack.  After you do this, you can
+	// no longer use arithmetic operations or anything else that
+	// modifies eflags.
+	// LAB 4: Your code here.
+	
+	addq $8, %rsp /* go to eflags skipping rip*/
+	popfq /*pop the flags*/ 
+	
+	// Switch back to the adjusted trap-time stack.
+	// LAB 4: Your code here.
+	
+	popq %rsp /* already at the point of rsp. so just pop.*/
 
-					(非嵌套)
-		-------------+		<-- trap-time %rsp
-		trap-time rsp-8
-		trap-time eflags
-		trap-time rip
-	*/
-
-	// 恢复 trap-time 寄存器集.  接下来不能再修改任何通用寄存器集 PushRegs.
-	POPA_	/* 之前已经通过增加 16-Byte 跳过了 fault_va 和 utf_err，所以只需使用 POPA_ 恢复 */
-
-	// 从栈中恢复 %eflags.  接下来不能再使用修改 %eflags 的指令，比如算术指令sub, cmp等.
-	addq $8, %rsp	/* 跳过 %rip，指向 %eflags */
-	popfq			/* 从栈中恢复 %eflags */
-
-	/*	此时的用户异常栈(嵌套)：
-		
-		-------------+		<-- trap-time %rsp (former)
-		trap-time rip 
-		-------------+		<-- trap-time %rsp - 8
-		trap-time rsp-8		<-- %rsp
-		(blank 8-Byte)
-		trap-time rip
-
-					(非嵌套)
-		-------------+		<-- trap-time %rsp
-		trap-time rsp-8		<-- %rsp(trap-time %rsp-8)
-		(blank 8-Byte)
-		trap-time rip
-	*/
-
-	// 切换回调整后的 trap-time 栈.
-	popq %rsp		/* 已经指向 %rsp，直接 pop 恢复 */
-
-	// 返回重新执行引起页错误的环境指令.
-	ret				/* popq %rip */
+	// Return to re-execute the instruction that faulted.
+	// LAB 4: Your code here.
+	
+	ret

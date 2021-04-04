@@ -1,6 +1,6 @@
 // User-level IPC library routines
 
-#include "inc/lib.h"
+#include <inc/lib.h>
 
 // Receive a value via IPC and return it.
 // If 'pg' is nonnull, then any page sent by the sender will be mapped at
@@ -23,26 +23,21 @@ int32_t
 ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 {
 	int r = 0;
-	if (pg)
-	{
+	if(pg) {
 		r = sys_ipc_recv(pg);
 	}
-	else
-	{
-		r = sys_ipc_recv((void *)KERNBASE);
+	else {
+		r = sys_ipc_recv((void*)KERNBASE);
 	}
-	if (r < 0)
-	{
-		*from_env_store = (from_env_store != NULL) ? (envid_t)0 : *from_env_store;
+	if (r < 0) {
+		*from_env_store =  (from_env_store != NULL) ? (envid_t)0 : *from_env_store;
 		*perm_store = (perm_store != NULL) ? (int)0 : *perm_store;
 		return r;
 	}
-	if (from_env_store)
-	{
+	if(from_env_store) {
 		*from_env_store = thisenv->env_ipc_from;
 	}
-	if (perm_store)
-	{
+	if(perm_store) {
 		*perm_store = thisenv->env_ipc_perm;
 	}
 	return thisenv->env_ipc_value;
@@ -58,23 +53,20 @@ ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 //   Use sys_yield() to be CPU-friendly.
 //   If 'pg' is null, pass sys_ipc_recv a value that it will understand
 //   as meaning "no page".  (Zero is not the right value.)
-void ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
+void
+ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 {
 	int r = -E_IPC_NOT_RECV;
-	while (r == -E_IPC_NOT_RECV)
-	{
-		if (pg)
-		{
-			r = sys_ipc_try_send(to_env, val, pg, perm);
+	while(r == -E_IPC_NOT_RECV) {
+		if(pg) {
+			r = sys_ipc_try_send(to_env,val,pg,perm);
 		}
-		else
-		{
-			r = sys_ipc_try_send(to_env, val, (void *)KERNBASE, perm);
+		else {
+			r = sys_ipc_try_send(to_env, val, (void*)KERNBASE, perm);
 		}
 		sys_yield();
 	}
-	if (r != 0)
-	{
+	if (r != 0) {
 		panic("something went wrong with sending the page");
 	}
 	// LAB 4: Your code here.

@@ -1,6 +1,6 @@
 // test user fault handler being called with no exception stack mapped
 
-#include "inc/lib.h"
+#include <inc/lib.h>
 
 void _pgfault_upcall();
 

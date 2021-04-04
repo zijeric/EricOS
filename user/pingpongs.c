@@ -1,7 +1,7 @@
 // Ping-pong a counter between two shared-memory processes.
 // Only need to start one of these -- splits into two with sfork.
 
-#include "inc/lib.h"
+#include <inc/lib.h>
 
 uint32_t val;
 
@@ -12,7 +12,7 @@ umain(int argc, char **argv)
 	uint32_t i;
 
 	i = 0;
-	if ((who = fork()) != 0) {
+	if ((who = sfork()) != 0) {
 		cprintf("i am %08x; thisenv is %p\n", sys_getenvid(), thisenv);
 		// get the ball rolling
 		cprintf("send 0 from %x to %x\n", sys_getenvid(), who);

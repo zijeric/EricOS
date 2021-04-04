@@ -1,16 +1,38 @@
-/*
- * 以下代码参考 libdwarf 的实现，http://www.mit.edu/afs.new/sipb.mit.edu/project/freebsd/head/contrib/elftoolchain/libdwarf/libdwarf_lineno.c
+/*-
+ * Copyright (c) 2009,2011 Kai Wang
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 
-#include "inc/types.h"
-#include "inc/string.h"
-#include "inc/assert.h"
-#include "AlvOS/dwarf_elf.h"
-#include "AlvOS/dwarf_define.h"
-#include "AlvOS/dwarf_error.h"
-#include "AlvOS/dwarf.h"
+#include <inc/types.h>
+#include <inc/string.h>
+#include <inc/assert.h>
+#include "dwarf_elf.h"
+#include "dwarf_define.h"
+#include "dwarf_error.h"
+#include "dwarf.h"
 
-#include "AlvOS/dwarf_lineno.h"
+#include "dwarf_lineno.h"
 
 extern Dwarf_Debug dbg;
 Dwarf_Small global_std_op[512];
@@ -23,11 +45,15 @@ uint64_t
 _dwarf_decode_uleb128(uint8_t **dp);
 int64_t
 _dwarf_decode_sleb128(uint8_t **dp);
-int _dwarf_find_section_enhanced(Dwarf_Section *ds);
+int  _dwarf_find_section_enhanced(Dwarf_Section *ds);
+
+
+
+
 
 static int
 _dwarf_lineno_run_program(Dwarf_CU *cu, Dwarf_LineInfo li, uint8_t *p,
-                          uint8_t *pe, Dwarf_Addr pc, Dwarf_Error *error)
+    uint8_t *pe, Dwarf_Addr pc, Dwarf_Error *error)
 {
     Dwarf_Line ln, tln;
     uint64_t address, file, line, column, isa, opsize;
@@ -35,41 +61,38 @@ _dwarf_lineno_run_program(Dwarf_CU *cu, Dwarf_LineInfo li, uint8_t *p,
     int prologue_end, epilogue_begin;
     int ret;
 
-    ln = &li->li_line;
-#define RESET_REGISTERS           \
-    do                            \
-    {                             \
-        address = 0;              \
-        file = 1;                 \
-        line = 1;                 \
-        column = 0;               \
-        is_stmt = li->li_defstmt; \
-        basic_block = 0;          \
-        end_sequence = 0;         \
-        prologue_end = 0;         \
-        epilogue_begin = 0;       \
-    } while (0)
+	ln = &li->li_line;
+#define RESET_REGISTERS                     \
+    do {                            \
+        address        = 0;             \
+        file           = 1;             \
+        line           = 1;             \
+        column         = 0;             \
+        is_stmt        = li->li_defstmt;        \
+        basic_block    = 0;             \
+        end_sequence   = 0;             \
+        prologue_end   = 0;             \
+        epilogue_begin = 0;             \
+    } while(0)
 
-#define APPEND_ROW                    \
-    do                                \
-    {                                 \
-        if (pc < address)             \
-        {                             \
-            return DW_DLE_NONE;       \
-        }                             \
-        ln->ln_addr = address;        \
-        ln->ln_symndx = 0;            \
-        ln->ln_fileno = file;         \
-        ln->ln_lineno = line;         \
-        ln->ln_column = column;       \
-        ln->ln_bblock = basic_block;  \
-        ln->ln_stmt = is_stmt;        \
-        ln->ln_endseq = end_sequence; \
-        li->li_lnlen++;               \
-    } while (0)
+#define APPEND_ROW                      \
+    do {                            \
+        if (pc < address) {               \
+			return DW_DLE_NONE;			\
+        }                       \
+        ln->ln_addr   = address;            \
+        ln->ln_symndx = 0;              \
+        ln->ln_fileno = file;               \
+        ln->ln_lineno = line;               \
+        ln->ln_column = column;             \
+        ln->ln_bblock = basic_block;            \
+        ln->ln_stmt   = is_stmt;            \
+        ln->ln_endseq = end_sequence;           \
+        li->li_lnlen++;                 \
+    } while(0)
 
-#define LINE(x) (li->li_lbase + (((x)-li->li_opbase) % li->li_lrange))
-#define ADDRESS(x) ((((x)-li->li_opbase) / li->li_lrange) * li->li_minlen)
+#define LINE(x) (li->li_lbase + (((x) - li->li_opbase) % li->li_lrange))
+#define ADDRESS(x) ((((x) - li->li_opbase) / li->li_lrange) * li->li_minlen)
 
     /*
      *   ln->ln_li     = li;             \
@@ -80,10 +103,8 @@ _dwarf_lineno_run_program(Dwarf_CU *cu, Dwarf_LineInfo li, uint8_t *p,
     /*
      * Start line number program.
      */
-    while (p < pe)
-    {
-        if (*p == 0)
-        {
+    while (p < pe) {
+        if (*p == 0) {
 
             /*
              * Extended Opcodes.
@@ -91,8 +112,7 @@ _dwarf_lineno_run_program(Dwarf_CU *cu, Dwarf_LineInfo li, uint8_t *p,
 
             p++;
             opsize = _dwarf_decode_uleb128(&p);
-            switch (*p)
-            {
+            switch (*p) {
             case DW_LNE_end_sequence:
                 p++;
                 end_sequence = 1;
@@ -105,7 +125,7 @@ _dwarf_lineno_run_program(Dwarf_CU *cu, Dwarf_LineInfo li, uint8_t *p,
             case DW_LNE_define_file:
                 p++;
                 ret = _dwarf_lineno_add_file(li, &p, NULL,
-                                             error, dbg);
+                    error, dbg);
                 if (ret != DW_DLE_NONE)
                     goto prog_fail;
                 break;
@@ -113,16 +133,14 @@ _dwarf_lineno_run_program(Dwarf_CU *cu, Dwarf_LineInfo li, uint8_t *p,
                 /* Unrecognized extened opcodes. */
                 p += opsize;
             }
-        }
-        else if (*p > 0 && *p < li->li_opbase)
-        {
+
+        } else if (*p > 0 && *p < li->li_opbase) {
 
             /*
              * Standard Opcodes.
              */
 
-            switch (*p++)
-            {
+            switch (*p++) {
             case DW_LNS_copy:
                 APPEND_ROW;
                 basic_block = 0;
@@ -131,7 +149,7 @@ _dwarf_lineno_run_program(Dwarf_CU *cu, Dwarf_LineInfo li, uint8_t *p,
                 break;
             case DW_LNS_advance_pc:
                 address += _dwarf_decode_uleb128(&p) *
-                           li->li_minlen;
+                    li->li_minlen;
                 break;
             case DW_LNS_advance_line:
                 line += _dwarf_decode_sleb128(&p);
@@ -167,9 +185,8 @@ _dwarf_lineno_run_program(Dwarf_CU *cu, Dwarf_LineInfo li, uint8_t *p,
                 /* Unrecognized extened opcodes. What to do? */
                 break;
             }
-        }
-        else
-        {
+
+        } else {
 
             /*
              * Special Opcodes.
@@ -191,15 +208,15 @@ prog_fail:
 
     return (ret);
 
-#undef RESET_REGISTERS
-#undef APPEND_ROW
-#undef LINE
-#undef ADDRESS
+#undef  RESET_REGISTERS
+#undef  APPEND_ROW
+#undef  LINE
+#undef  ADDRESS
 }
 
 static int
 _dwarf_lineno_add_file(Dwarf_LineInfo li, uint8_t **p, const char *compdir,
-                       Dwarf_Error *error, Dwarf_Debug dbg)
+    Dwarf_Error *error, Dwarf_Debug dbg)
 {
     char *fname;
     //const char *dirname;
@@ -207,14 +224,14 @@ _dwarf_lineno_add_file(Dwarf_LineInfo li, uint8_t **p, const char *compdir,
     int slen;
 
     src = *p;
-    /*
+/*
     if ((lf = malloc(sizeof(struct _Dwarf_LineFile))) == NULL) {
         DWARF_SET_ERROR(dbg, error, DW_DLE_MEMORY);
         return (DW_DLE_MEMORY);
     }
-*/
+*/  
     //lf->lf_fullpath = NULL;
-    fname = (char *)src;
+    fname = (char *) src;
     src += strlen(fname) + 1;
     _dwarf_decode_uleb128(&src);
 
@@ -245,10 +262,11 @@ _dwarf_lineno_add_file(Dwarf_LineInfo li, uint8_t **p, const char *compdir,
     return (DW_DLE_NONE);
 }
 
-int _dwarf_lineno_init(Dwarf_Die *die, uint64_t offset, Dwarf_LineInfo linfo, Dwarf_Addr pc, Dwarf_Error *error)
-{
+int     
+_dwarf_lineno_init(Dwarf_Die *die, uint64_t offset, Dwarf_LineInfo linfo, Dwarf_Addr pc, Dwarf_Error *error)
+{   
     Dwarf_Section myds = {.ds_name = ".debug_line"};
-    Dwarf_Section *ds = &myds;
+	Dwarf_Section *ds = &myds;
     Dwarf_CU *cu;
     Dwarf_Attribute at;
     Dwarf_LineInfo li;
@@ -256,9 +274,9 @@ int _dwarf_lineno_init(Dwarf_Die *die, uint64_t offset, Dwarf_LineInfo linfo, Dw
     uint64_t length, hdroff, endoff;
     uint8_t *p;
     int dwarf_size, i, ret;
-
+            
     cu = die->cu_header;
-    assert(cu != NULL);
+    assert(cu != NULL); 
     assert(dbg != NULL);
 
     if ((_dwarf_find_section_enhanced(ds)) != 0)
@@ -285,16 +303,13 @@ int _dwarf_lineno_init(Dwarf_Die *die, uint64_t offset, Dwarf_LineInfo linfo, Dw
      */
 
     length = dbg->read(ds->ds_data, &offset, 4);
-    if (length == 0xffffffff)
-    {
+    if (length == 0xffffffff) {
         dwarf_size = 8;
         length = dbg->read(ds->ds_data, &offset, 8);
-    }
-    else
+    } else
         dwarf_size = 4;
 
-    if (length > ds->ds_size - offset)
-    {
+    if (length > ds->ds_size - offset) {
         DWARF_SET_ERROR(dbg, error, DW_DLE_DEBUG_LINE_LENGTH_BAD);
         return (DW_DLE_DEBUG_LINE_LENGTH_BAD);
     }
@@ -314,8 +329,7 @@ int _dwarf_lineno_init(Dwarf_Die *die, uint64_t offset, Dwarf_LineInfo linfo, Dw
     //STAILQ_INIT(&li->li_lflist);
     //STAILQ_INIT(&li->li_lnlist);
 
-    if ((int)li->li_hdrlen - 5 < li->li_opbase - 1)
-    {
+    if ((int)li->li_hdrlen - 5 < li->li_opbase - 1) {
         ret = DW_DLE_DEBUG_LINE_LENGTH_BAD;
         DWARF_SET_ERROR(dbg, error, ret);
         goto fail_cleanup;
@@ -340,8 +354,7 @@ int _dwarf_lineno_init(Dwarf_Die *die, uint64_t offset, Dwarf_LineInfo linfo, Dw
      */
     length = 0;
     p = ds->ds_data + offset;
-    while (*p != '\0')
-    {
+    while (*p != '\0') {
         while (*p++ != '\0')
             ;
         length++;
@@ -349,13 +362,12 @@ int _dwarf_lineno_init(Dwarf_Die *die, uint64_t offset, Dwarf_LineInfo linfo, Dw
     li->li_inclen = length;
 
     /* Sanity check. */
-    if (p - ds->ds_data > (int)ds->ds_size)
-    {
+    if (p - ds->ds_data > (int) ds->ds_size) {
         ret = DW_DLE_DEBUG_LINE_LENGTH_BAD;
         DWARF_SET_ERROR(dbg, error, ret);
         goto fail_cleanup;
     }
-    /*
+/*
     if ((li->li_incdirs = malloc(length * sizeof(char *))) == NULL) {
         ret = DW_DLE_MEMORY;
         DWARF_SET_ERROR(dbg, error, ret);
@@ -376,16 +388,14 @@ int _dwarf_lineno_init(Dwarf_Die *die, uint64_t offset, Dwarf_LineInfo linfo, Dw
     /*
      * Process file list.
      */
-    while (*p != '\0')
-    {
+    while (*p != '\0') {
         ret = _dwarf_lineno_add_file(li, &p, NULL, error, dbg);
-        //p++;
+		//p++;
     }
 
     p++;
     /* Sanity check. */
-    if (p - ds->ds_data - hdroff != li->li_hdrlen)
-    {
+    if (p - ds->ds_data - hdroff != li->li_hdrlen) {
         ret = DW_DLE_DEBUG_LINE_LENGTH_BAD;
         DWARF_SET_ERROR(dbg, error, ret);
         goto fail_cleanup;
@@ -395,7 +405,7 @@ int _dwarf_lineno_init(Dwarf_Die *die, uint64_t offset, Dwarf_LineInfo linfo, Dw
      * Process line number program.
      */
     ret = _dwarf_lineno_run_program(cu, li, p, ds->ds_data + endoff, pc,
-                                    error);
+        error);
     if (ret != DW_DLE_NONE)
         goto fail_cleanup;
 
@@ -411,28 +421,29 @@ fail_cleanup:
     return (ret);
 }
 
-int dwarf_srclines(Dwarf_Die *die, Dwarf_Line linebuf, Dwarf_Addr pc, Dwarf_Error *error)
+int
+dwarf_srclines(Dwarf_Die *die, Dwarf_Line linebuf, Dwarf_Addr pc, Dwarf_Error *error)
 {
     _Dwarf_LineInfo li;
     Dwarf_Attribute *at;
 
-    assert(die);
-    assert(linebuf);
+	assert(die);
+	assert(linebuf);
 
-    memset(&li, 0, sizeof(_Dwarf_LineInfo));
+	memset(&li, 0, sizeof(_Dwarf_LineInfo));
 
-    if ((at = _dwarf_attr_find(die, DW_AT_stmt_list)) == NULL)
-    {
+    if ((at = _dwarf_attr_find(die, DW_AT_stmt_list)) == NULL) {
         DWARF_SET_ERROR(dbg, error, DW_DLE_NO_ENTRY);
         return (DW_DLV_NO_ENTRY);
     }
 
     if (_dwarf_lineno_init(die, at->u[0].u64, &li, pc, error) !=
         DW_DLE_NONE)
-    {
-        return (DW_DLV_ERROR);
-    }
+	{
+          return (DW_DLV_ERROR);
+	}
     *linebuf = li.li_line;
 
     return (DW_DLV_OK);
 }
+

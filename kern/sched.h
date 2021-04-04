@@ -1,11 +1,12 @@
 /* See COPYRIGHT for copyright information. */
 
-#ifndef ALVOS_KERN_SCHED_H
-#define ALVOS_KERN_SCHED_H
-#ifndef ALVOS_KERNEL
+#ifndef JOS_KERN_SCHED_H
+#define JOS_KERN_SCHED_H
+#ifndef JOS_KERNEL
+# error "This is a JOS kernel header; user programs should not #include it"
 #endif
 
 // This function does not return.
 void sched_yield(void) __attribute__((noreturn));
 
-#endif // !ALVOS_KERN_SCHED_H
+#endif	// !JOS_KERN_SCHED_H

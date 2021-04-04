@@ -1,7 +1,7 @@
-#ifndef ALVOS_KBDREG_H
-#define ALVOS_KBDREG_H
+#ifndef JOS_KBDREG_H
+#define JOS_KBDREG_H
 
-// 笔记本特殊的 keycodes
+// Special keycodes
 #define KEY_HOME	0xE0
 #define KEY_END		0xE1
 #define KEY_UP		0xE2
@@ -16,7 +16,7 @@
 
 /* This is i8042reg.h + kbdreg.h from NetBSD. */
 
-#define	 KBSTATP	0x64	/* kbd controller status port(I) */
+#define	KBSTATP		0x64	/* kbd controller status port(I) */
 #define	 KBS_DIB	0x01	/* kbd data in buffer */
 #define	 KBS_IBF	0x02	/* kbd input buffer low */
 #define	 KBS_WARM	0x04	/* kbd input buffer low */
@@ -26,7 +26,7 @@
 #define	 KBS_RERR	0x40	/* kbd receive error */
 #define	 KBS_PERR	0x80	/* kbd parity error */
 
-#define	 KBCMDP		    0x64	/* kbd controller port(O) */
+#define	KBCMDP		0x64	/* kbd controller port(O) */
 #define	 KBC_RAMREAD	0x20	/* read from RAM */
 #define	 KBC_RAMWRITE	0x60	/* write to RAM */
 #define	 KBC_AUXDISABLE	0xa7	/* disable auxiliary port */
@@ -80,4 +80,4 @@
 #define	KBR_RSTDONE	0xAA	/* reset complete */
 #define	KBR_ECHO	0xEE	/* echo response */
 
-#endif /* !ALVOS_KBDREG_H */
+#endif /* !JOS_KBDREG_H */
