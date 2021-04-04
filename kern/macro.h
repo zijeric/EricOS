@@ -1,3 +1,4 @@
+// x86_64 移除了pusha，宏定义实现类似于 x86 的 pusha 指令
 #define PUSHA        \
     subq $120,%rsp  ; \
     movq %rax,112(%rsp); \

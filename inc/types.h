@@ -1,5 +1,5 @@
-#ifndef JOS_INC_TYPES_H
-#define JOS_INC_TYPES_H
+#ifndef ALVOS_INC_TYPES_H
+#define ALVOS_INC_TYPES_H
 
 #ifndef NULL
 #define NULL ((void *)0)
@@ -68,4 +68,4 @@ typedef int32_t off_t;
 // 返回 成员属性 相对于结构类型开头的偏移量
 #define offsetof(type, member) ((size_t)(&((type *)0)->member))
 
-#endif /* !JOS_INC_TYPES_H */
+#endif

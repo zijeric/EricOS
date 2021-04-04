@@ -1,5 +1,5 @@
-#ifndef JOS_INC_ASSERT_H
-#define JOS_INC_ASSERT_H
+#ifndef ALVOS_INC_ASSERT_H
+#define ALVOS_INC_ASSERT_H
 
 #include "inc/stdio.h"
 
@@ -20,4 +20,4 @@ void _panic(const char *, int, const char *, ...) __attribute__((noreturn));
 	case 0:              \
 	case (x):
 
-#endif /* !JOS_INC_ASSERT_H */
+#endif

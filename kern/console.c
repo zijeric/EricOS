@@ -1,13 +1,11 @@
-/* See COPYRIGHT for copyright information. */
+#include "inc/x86.h"
+#include "inc/memlayout.h"
+#include "inc/kbdreg.h"
+#include "inc/string.h"
+#include "inc/assert.h"
 
-#include <inc/x86.h>
-#include <inc/memlayout.h>
-#include <inc/kbdreg.h>
-#include <inc/string.h>
-#include <inc/assert.h>
-
-#include <kern/console.h>
-#include <kern/picirq.h>
+#include "kern/console.h"
+#include "kern/picirq.h"
 
 static void cons_intr(int (*proc)(void));
 static void cons_putc(int c);
@@ -109,9 +107,7 @@ serial_init(void)
 
 
 /***** Parallel port output code *****/
-// For information on PC parallel port programming, see the class References
-// page.
-
+// 输出字符前的硬件准备工作
 static void
 lpt_putc(int c)
 {
@@ -130,7 +126,11 @@ lpt_putc(int c)
 /***** Text-mode CGA/VGA display output *****/
 
 static unsigned addr_6845;
+
+// 静态指针 crt_buf 指向内存中物理地址为 0xb8000 的位置
 static uint16_t *crt_buf;
+
+// cur_pos 是一个静态变量，表示的是光标的位置
 static uint16_t crt_pos;
 
 static void
@@ -162,28 +162,38 @@ cga_init(void)
 }
 
 
-
+/**
+ * 在屏幕输出一个字符
+ * c: 要输出的字符 [0, 7]:ASCII，[8, 15]:输出字符的格式，高16位未使用
+ */
 static void
 cga_putc(int c)
 {
-	// if no attribute given, then use black on white
+	// 如果没有设置字符格式[8, 15]，则默认为白色背景上的黑色字体
 	if (!(c & ~0xFF))
 		c |= 0x0700;
 
+	/**
+	 * 显示屏规定25行、每行80个字符，每个字符实际上占现存中的两个字节(80*2*25)
+	 * 物理内存[0xb8000, 0xb8fa0]都会以字符的形式在屏幕上显示
+	 * cur_pos 是一个静态变量，表示的是光标的位置，CRT_COLS 是常量，表示一行行可以输出的字符数，25
+	 */
 	switch (c & 0xff) {
-	case '\b':
+	case '\b':		// 表示退格
 		if (crt_pos > 0) {
+			// 光标--，原来的字符替换为空格
 			crt_pos--;
 			crt_buf[crt_pos] = (c & ~0xff) | ' ';
 		}
 		break;
-	case '\n':
+	case '\n':		// 表示换行
+		// 光标位置换到下一行相同的位置
 		crt_pos += CRT_COLS;
 		/* fallthru */
-	case '\r':
+	case '\r':		// 表示光标退到本行的开头处
 		crt_pos -= (crt_pos % CRT_COLS);
 		break;
-	case '\t':
+	case '\t':		// 光标向前移5格
 		cons_putc(' ');
 		cons_putc(' ');
 		cons_putc(' ');
@@ -191,22 +201,28 @@ cga_putc(int c)
 		cons_putc(' ');
 		break;
 	default:
-		crt_buf[crt_pos++] = c;		/* write the character */
+		// 静态指针 crt_buf 指向内存中物理地址为 0xb8000 的位置
+		// 当字符不是以上的特殊字符，程序将其写入显存，并将光标++
+		// crt_buf 指向的是16位空间，c 是32位的，于是写入时只取低16位
+		crt_buf[crt_pos++] = c;		/* 在屏幕上输出一个字符 */
 		break;
 	}
 
-	// When the crt pos is more than that of CRT_SIZE (if output exceeds CRT_SIZE), it adds one more row at the end 
-	// filling it up with ' ' (scrolls down to the next line). The data from the second line of the screen to the end 
-	// is put into crt_buf, effectively removing the first line of the screen
+	// CRT_SIZE = 80*25 一个屏幕可以输出的字符数
+	// 每输出一次字符判断，当crt_pos 大于 CRT_SIZE 时(如果输出超过CRT_SIZE)，会在末尾增加一行，用' '填充(向下滚动到下一行)
+	// 滚屏: 将屏幕的第二行到最后一行的数据都存储到 crt_buf 中，有效地删除了屏幕的第一行
 	if (crt_pos >= CRT_SIZE) {
 		int i;
+		// 执行滚屏操作
 		memmove(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16_t));
 		for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++)
+			// 将最后一行全部输出为空格，只有'\n'和'\t'才有可能造成光标位置超出屏幕范围
 			crt_buf[i] = 0x0700 | ' ';
+		// 重置光标位于最后一行开始开始位置
 		crt_pos -= CRT_COLS;
 	}
 
-	/* move that little blinky thing */
+	/* 硬件操作 */
 	outb(addr_6845, 14);
 	outb(addr_6845 + 1, crt_pos >> 8);
 	outb(addr_6845, 15);
@@ -432,7 +448,7 @@ cons_getc(void)
 	return 0;
 }
 
-// output a character to the console
+// 输出一个字符导致控制台
 static void
 cons_putc(int c)
 {

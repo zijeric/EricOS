@@ -7,16 +7,7 @@
 OBJDIR := obj
 
 # Run 'make V=1' to turn on verbose commands, or 'make V=0' to turn them off.
-ifeq ($(V),1)
-override V =
-endif
-ifeq ($(V),0)
-override V = @
-endif
-
--include conf/lab.mk
-
--include conf/env.mk
+V = @
 
 LABSETUP ?= ./
 
@@ -81,9 +72,9 @@ all:
 	   $(OBJDIR)/lib/%.o $(OBJDIR)/fs/%.o $(OBJDIR)/net/%.o \
 	   $(OBJDIR)/user/%.o
 
-KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -DDWARF_SUPPORT -gdwarf-2 -mcmodel=large -m64
-BOOT_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gdwarf-2 -m32
-USER_CFLAGS := $(CFLAGS) -DJOS_USER -gdwarf-2 -mcmodel=large -m64
+KERN_CFLAGS := $(CFLAGS) -DALVOS_KERNEL -DDWARF_SUPPORT -gdwarf-2 -mcmodel=large -m64
+BOOT_CFLAGS := $(CFLAGS) -DALVOS_KERNEL -gdwarf-2 -m32
+USER_CFLAGS := $(CFLAGS) -DALVOS_USER -gdwarf-2 -mcmodel=large -m64
 
 # 如果变量 X 自上次 make 运行以来发生了更改，则更新.vars.X.
 #
@@ -151,11 +142,11 @@ print-gdbport:
 
 # 用于删除编译结果文件
 clean:
-	rm -rf $(OBJDIR) .gdbinit jos.in qemu.log
+	rm -rf $(OBJDIR) .gdbinit alvos.in qemu.log
 
 realclean: clean
 	rm -rf lab$(LAB).tar.gz \
-		jos.out $(wildcard jos.out.*) \
+		alvos.out $(wildcard alvos.out.*) \
 		qemu.pcap $(wildcard qemu.pcap.*)
 
 distclean: realclean
@@ -168,7 +159,7 @@ endif
 grade:
 	@echo $(MAKE) clean
 	@$(MAKE) clean || \
-	  (echo "'make clean' failed.  HINT: Do you have another running instance of JOS?" && exit 1)
+	  (echo "'make clean' failed.  HINT: Do you have another running instance of AlvOS?" && exit 1)
 	./grade-lab$(LAB) $(GRADEFLAGS)
 
 handin: realclean
@@ -217,10 +208,6 @@ run-%-nox: prep-% pre-qemu
 run-%: prep-% pre-qemu
 	$(QEMU) $(QEMUOPTS)
 
-# This magic automatically generates makefile dependencies
-# for header files included from C source files we compile,
-# and keeps those dependencies up-to-date every time we recompile.
-# See 'mergedep.pl' for more information.
 # 参考 MIT OS 源码，这种神奇的方法会自动为所编译的C源文件中包含的头文件生成makefile依赖项，并在每次重新编译时使这些依赖项保持最新
 $(OBJDIR)/.deps: $(foreach dir, $(OBJDIRS), $(wildcard $(OBJDIR)/$(dir)/*.d))
 	@mkdir -p $(@D)
@@ -232,4 +219,4 @@ always:
 	@:
 
 .PHONY: all always \
-	handin tarball clean realclean distclean grade handin-prep handin-check
+	tarball clean realclean distclean grade handin-prep handin-check

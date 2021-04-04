@@ -7,8 +7,7 @@ cputchar(int ch)
 {
 	char c = ch;
 
-	// Unlike standard Unix's putchar,
-	// the cputchar function _always_ outputs to the system console.
+	// 与标准的Unix的putchar不同，cputchar() 总是输出到系统控制台.
 	sys_cputs(&c, 1);
 }
 
@@ -18,9 +17,8 @@ getchar(void)
 	unsigned char c;
 	int r;
 
-	// JOS does, however, support standard _input_ redirection,
-	// allowing the user to redirect script files to the shell and such.
-	// getchar() reads a character from file descriptor 0.
+	// 然而，AlvOS 支持标准的_input_(输入)重定向，允许用户将脚本文件重定向到shell等等
+	// getchar()从文件描述符0读取一个字符
 	r = read(0, &c, 1);
 	if (r < 0)
 		return r;
@@ -30,9 +28,8 @@ getchar(void)
 }
 
 
-// "Real" console file descriptor implementation.
-// The putchar/getchar functions above will still come here by default,
-// but now can be redirected to files, pipes, etc., via the fd layer.
+// "真实的"控制台文件描述符实现.
+// 默认情况下，上面的 putchar()/getchar() 仍然会出现在这里，但是现在可以通过 fd 层重定向到文件、管道等.
 
 static ssize_t devcons_read(struct Fd*, void*, size_t);
 static ssize_t devcons_write(struct Fd*, const void*, size_t);

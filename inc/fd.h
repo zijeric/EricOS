@@ -2,8 +2,8 @@
 // that our user-land support library implements for the use of applications.
 // See the code in the lib directory for the implementation details.
 
-#ifndef JOS_INC_FD_H
-#define JOS_INC_FD_H
+#ifndef ALVOS_INC_FD_H
+#define ALVOS_INC_FD_H
 
 #include <inc/types.h>
 #include <inc/fs.h>
@@ -55,4 +55,4 @@ extern struct Dev devfile;
 extern struct Dev devcons;
 extern struct Dev devpipe;
 
-#endif	// not JOS_INC_FD_H
+#endif

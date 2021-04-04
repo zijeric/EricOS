@@ -1,3 +1,6 @@
+/*
+ * 以下代码参考 libdwarf 的实现，声明 dwarf_lineno.c 的方法
+ */
 #ifndef DWARF_LINENO_H
 // External functions used
 extern Dwarf_Attribute *_dwarf_attr_find(Dwarf_Die *, uint16_t);

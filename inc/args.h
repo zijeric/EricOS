@@ -1,9 +1,9 @@
-#ifndef JOS_INC_ARGS_H
-#define JOS_INC_ARGS_H
+#ifndef ALVOS_INC_ARGS_H
+#define ALVOS_INC_ARGS_H
 
 struct Argstate;
 
-// JOS command-line parsing functions.
+// AlvOS command-line parsing functions.
 
 // Initializes the Argstate buffer from argc and argv.
 // (Note: it is safe to use a 'const char **' for argv.)

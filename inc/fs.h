@@ -1,7 +1,5 @@
-// See COPYRIGHT for copyright information.
-
-#ifndef JOS_INC_FS_H
-#define JOS_INC_FS_H
+#ifndef ALVOS_INC_FS_H
+#define ALVOS_INC_FS_H
 
 #include <inc/types.h>
 #include <inc/mmu.h>
@@ -51,7 +49,7 @@ struct File {
 
 // File system super-block (both in-memory and on-disk)
 
-#define FS_MAGIC	0x4A0530AE	// related vaguely to 'J\0S!'
+#define FS_MAGIC	0x4A0530AE	// related vaguely to 'ALV\0S!'
 
 struct Super {
 	uint32_t s_magic;		// Magic number: FS_MAGIC
@@ -113,4 +111,4 @@ union Fsipc {
 	char _pad[PGSIZE];
 };
 
-#endif /* !JOS_INC_FS_H */
+#endif

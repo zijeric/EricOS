@@ -1,5 +1,5 @@
-#ifndef JOS_STAB_H
-#define JOS_STAB_H
+#ifndef ALVOS_STAB_H
+#define ALVOS_STAB_H
 #include "inc/types.h"
 
 // <inc/stab.h>
@@ -47,4 +47,4 @@ struct Stab {
 	uint32_t n_value;	// value of symbol
 };
 
-#endif /* !JOS_STAB_H */
+#endif

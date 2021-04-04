@@ -1,5 +1,5 @@
-#ifndef JOS_INC_ERROR_H
-#define JOS_INC_ERROR_H
+#ifndef ALVOS_INC_ERROR_H
+#define ALVOS_INC_ERROR_H
 
 enum
 {
@@ -26,4 +26,4 @@ enum
 	MAXERROR
 };
 
-#endif // !JOS_INC_ERROR_H */
+#endif

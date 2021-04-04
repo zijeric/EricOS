@@ -1,15 +1,13 @@
-/* See COPYRIGHT for copyright information. */
-
-#ifndef JOS_KERN_TRAP_H
-#define JOS_KERN_TRAP_H
-#ifndef JOS_KERNEL
-# error "This is a JOS kernel header; user programs should not #include it"
+#ifndef ALVOS_KERN_TRAP_H
+#define ALVOS_KERN_TRAP_H
+#ifndef ALVOS_KERNEL
+# error "This is a AlvOS kernel header; user programs should not #include it"
 #endif
 
-#include <inc/trap.h>
-#include <inc/mmu.h>
+#include "inc/trap.h"
+#include "inc/mmu.h"
 
-/* The kernel's interrupt descriptor table */
+/* 内核的 IDT(interrupt descriptor table) */
 extern struct Gatedesc idt[];
 extern struct Pseudodesc idt_pd;
 
@@ -20,4 +18,4 @@ void print_trapframe(struct Trapframe *tf);
 void page_fault_handler(struct Trapframe *);
 void backtrace(struct Trapframe *);
 
-#endif /* JOS_KERN_TRAP_H */
+#endif

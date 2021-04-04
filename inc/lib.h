@@ -1,8 +1,8 @@
 // 用户态支持库的主要公共头文件，其代码位于lib目录中.
 // 为了链接到所有用户态应用程序(而不是内核或bootloader)，需要定义 lib.h 为我们内核的标准C库.
 
-#ifndef JOS_INC_LIB_H
-#define JOS_INC_LIB_H 1
+#ifndef ALVOS_INC_LIB_H
+#define ALVOS_INC_LIB_H 1
 
 #include "inc/types.h"
 #include "inc/stdio.h"
@@ -75,7 +75,6 @@ envid_t ipc_find_env(enum EnvType type);
 // fork.c
 #define PTE_SHARE 0x400
 envid_t fork(void);
-envid_t sfork(void); // Challenge!
 
 // fd.c
 int close(int fd);
@@ -125,4 +124,4 @@ void wait(envid_t env);
 #define O_EXCL 0x0400  /* error if already exists */
 #define O_MKDIR 0x0800 /* create directory, not regular file */
 
-#endif // !JOS_INC_LIB_H
+#endif

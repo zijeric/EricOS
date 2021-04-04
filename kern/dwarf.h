@@ -1,3 +1,16 @@
+/**
+ * 参考 libdwarf.h 实现，https://opensource.apple.com/source/dtrace/dtrace-262.50.12/libdwarf/libdwarf.h
+ * 
+ * 为了提高编译速度，仿照 Apple 将 Build Setting 的 Debug Information Format 中的 Debug 改成 DWARF 
+ * DWARF 是一种调试文件格式，许多编译器和调试器都使用它来支持源代码级调试
+ * 它满足了许多面向过程语言(如C、c++和Fortran)的需求，并可扩展到其他语言
+ * DWARF 是独立于体系结构的，适用于任何处理器或操作系统
+ * 广泛用于Unix、Linux和其他操作系统，以及独立环境中
+ * 
+ * 由于多数程序代码段是由多个阶层式的代码块组成，为了高效的调试和查询
+ * DWARF 利用这个特性将程序拆解成树状结构，并包含相关信息（例如参数的大小，类型等）
+ * 参考：http://www.dwarfstd.org/doc/Debugging%20using%20DWARF-2012.pdf
+ */
 #ifndef DWARF_H
 #define DWARF_H
 

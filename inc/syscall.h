@@ -1,5 +1,5 @@
-#ifndef JOS_INC_SYSCALL_H
-#define JOS_INC_SYSCALL_H
+#ifndef ALVOS_INC_SYSCALL_H
+#define ALVOS_INC_SYSCALL_H
 
 /* 系统调用序号 */
 enum {
@@ -20,4 +20,4 @@ enum {
 	NSYSCALLS
 };
 
-#endif /* !JOS_INC_SYSCALL_H */
+#endif

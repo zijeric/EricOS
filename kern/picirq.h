@@ -1,9 +1,7 @@
-/* See COPYRIGHT for copyright information. */
-
-#ifndef JOS_KERN_PICIRQ_H
-#define JOS_KERN_PICIRQ_H
-#ifndef JOS_KERNEL
-# error "This is a JOS kernel header; user programs should not #include it"
+#ifndef ALVOS_KERN_PICIRQ_H
+#define ALVOS_KERN_PICIRQ_H
+#ifndef ALVOS_KERNEL
+# error "This is a AlvOS kernel header; user programs should not #include it"
 #endif
 
 #define MAX_IRQS	16	// Number of IRQs
@@ -17,12 +15,12 @@
 
 #ifndef __ASSEMBLER__
 
-#include <inc/types.h>
-#include <inc/x86.h>
+#include "inc/types.h"
+#include "inc/x86.h"
 
 extern uint16_t irq_mask_8259A;
 void pic_init(void);
 void irq_setmask_8259A(uint16_t mask);
 #endif // !__ASSEMBLER__
 
-#endif // !JOS_KERN_PICIRQ_H
+#endif

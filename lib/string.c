@@ -1,15 +1,13 @@
-// Basic string routines.  Not hardware optimized, but not shabby.
+// 基本的字符串处理例程
 
-#include <inc/string.h>
+#include "inc/string.h"
 
-// Using assembly for memset/memmove
-// makes some difference on real hardware,
-// but it makes an even bigger difference on bochs.
-// Primespipe runs 3x faster this way.
+// 函数 memset/memmove 由C语言内嵌汇编实现
+// 在真正的硬件上会有一定程度的优化, 但在 Bochs 上会有更大的优化效果
+// 用这种方法, Primespipe 的运行速度快了3倍
 #define ASM 1
 
-int
-strlen(const char *s)
+int strlen(const char *s)
 {
 	int n;
 
@@ -18,8 +16,7 @@ strlen(const char *s)
 	return n;
 }
 
-int
-strnlen(const char *s, size_t size)
+int strnlen(const char *s, size_t size)
 {
 	int n;
 
@@ -48,12 +45,14 @@ strcat(char *dst, const char *src)
 }
 
 char *
-strncpy(char *dst, const char *src, size_t size) {
+strncpy(char *dst, const char *src, size_t size)
+{
 	size_t i;
 	char *ret;
 
 	ret = dst;
-	for (i = 0; i < size; i++) {
+	for (i = 0; i < size; i++)
+	{
 		*dst++ = *src;
 		// If strlen(src) < size, null-pad 'dst' out to 'size' chars
 		if (*src != '\0')
@@ -68,7 +67,8 @@ strlcpy(char *dst, const char *src, size_t size)
 	char *dst_in;
 
 	dst_in = dst;
-	if (size > 0) {
+	if (size > 0)
+	{
 		while (--size > 0 && *src != '\0')
 			*dst++ = *src++;
 		*dst = '\0';
@@ -76,23 +76,21 @@ strlcpy(char *dst, const char *src, size_t size)
 	return dst - dst_in;
 }
 
-int
-strcmp(const char *p, const char *q)
+int strcmp(const char *p, const char *q)
 {
 	while (*p && *p == *q)
 		p++, q++;
-	return (int) ((unsigned char) *p - (unsigned char) *q);
+	return (int)((unsigned char)*p - (unsigned char)*q);
 }
 
-int
-strncmp(const char *p, const char *q, size_t n)
+int strncmp(const char *p, const char *q, size_t n)
 {
 	while (n > 0 && *p && *p == *q)
 		n--, p++, q++;
 	if (n == 0)
 		return 0;
 	else
-		return (int) ((unsigned char) *p - (unsigned char) *q);
+		return (int)((unsigned char)*p - (unsigned char)*q);
 }
 
 // Return a pointer to the first occurrence of 'c' in 's',
@@ -102,7 +100,7 @@ strchr(const char *s, char c)
 {
 	for (; *s; s++)
 		if (*s == c)
-			return (char *) s;
+			return (char *)s;
 	return 0;
 }
 
@@ -114,7 +112,7 @@ strfind(const char *s, char c)
 	for (; *s; s++)
 		if (*s == c)
 			break;
-	return (char *) s;
+	return (char *)s;
 }
 
 #if ASM
@@ -125,16 +123,16 @@ memset(void *v, int c, size_t n)
 
 	if (n == 0)
 		return v;
-	if ((int64_t)v%4 == 0 && n%4 == 0) {
+	if ((int64_t)v % 4 == 0 && n % 4 == 0)
+	{
 		c &= 0xFF;
-		c = (c<<24)|(c<<16)|(c<<8)|c;
-		asm volatile("cld; rep stosl\n"
-			:: "D" (v), "a" (c), "c" (n/4)
-			: "cc", "memory");
-	} else
-		asm volatile("cld; rep stosb\n"
-			:: "D" (v), "a" (c), "c" (n)
-			: "cc", "memory");
+		c = (c << 24) | (c << 16) | (c << 8) | c;
+		asm volatile("cld; rep stosl\n" ::"D"(v), "a"(c), "c"(n / 4)
+					 : "cc", "memory");
+	}
+	else
+		asm volatile("cld; rep stosb\n" ::"D"(v), "a"(c), "c"(n)
+					 : "cc", "memory");
 	return v;
 }
 
@@ -146,24 +144,28 @@ memmove(void *dst, const void *src, size_t n)
 
 	s = src;
 	d = dst;
-	if (s < d && s + n > d) {
+	if (s < d && s + n > d)
+	{
 		s += n;
 		d += n;
-		if ((int64_t)s%4 == 0 && (int64_t)d%4 == 0 && n%4 == 0)
-			asm volatile("std; rep movsl\n"
-				:: "D" (d-4), "S" (s-4), "c" (n/4) : "cc", "memory");
+		if ((int64_t)s % 4 == 0 && (int64_t)d % 4 == 0 && n % 4 == 0)
+			asm volatile("std; rep movsl\n" ::"D"(d - 4), "S"(s - 4), "c"(n / 4)
+						 : "cc", "memory");
 		else
-			asm volatile("std; rep movsb\n"
-				:: "D" (d-1), "S" (s-1), "c" (n) : "cc", "memory");
+			asm volatile("std; rep movsb\n" ::"D"(d - 1), "S"(s - 1), "c"(n)
+						 : "cc", "memory");
 		// Some versions of GCC rely on DF being clear
-		asm volatile("cld" ::: "cc");
-	} else {
-		if ((int64_t)s%4 == 0 && (int64_t)d%4 == 0 && n%4 == 0)
-			asm volatile("cld; rep movsl\n"
-				:: "D" (d), "S" (s), "c" (n/4) : "cc", "memory");
+		asm volatile("cld" ::
+						 : "cc");
+	}
+	else
+	{
+		if ((int64_t)s % 4 == 0 && (int64_t)d % 4 == 0 && n % 4 == 0)
+			asm volatile("cld; rep movsl\n" ::"D"(d), "S"(s), "c"(n / 4)
+						 : "cc", "memory");
 		else
-			asm volatile("cld; rep movsb\n"
-				:: "D" (d), "S" (s), "c" (n) : "cc", "memory");
+			asm volatile("cld; rep movsb\n" ::"D"(d), "S"(s), "c"(n)
+						 : "cc", "memory");
 	}
 	return dst;
 }
@@ -192,12 +194,14 @@ memmove(void *dst, const void *src, size_t n)
 
 	s = src;
 	d = dst;
-	if (s < d && s + n > d) {
+	if (s < d && s + n > d)
+	{
 		s += n;
 		d += n;
 		while (n-- > 0)
 			*--d = *--s;
-	} else
+	}
+	else
 		while (n-- > 0)
 			*d++ = *s++;
 
@@ -211,15 +215,15 @@ memcpy(void *dst, const void *src, size_t n)
 	return memmove(dst, src, n);
 }
 
-int
-memcmp(const void *v1, const void *v2, size_t n)
+int memcmp(const void *v1, const void *v2, size_t n)
 {
-	const uint8_t *s1 = (const uint8_t *) v1;
-	const uint8_t *s2 = (const uint8_t *) v2;
+	const uint8_t *s1 = (const uint8_t *)v1;
+	const uint8_t *s2 = (const uint8_t *)v2;
 
-	while (n-- > 0) {
+	while (n-- > 0)
+	{
 		if (*s1 != *s2)
-			return (int) *s1 - (int) *s2;
+			return (int)*s1 - (int)*s2;
 		s1++, s2++;
 	}
 
@@ -229,15 +233,14 @@ memcmp(const void *v1, const void *v2, size_t n)
 void *
 memfind(const void *s, int c, size_t n)
 {
-	const void *ends = (const char *) s + n;
+	const void *ends = (const char *)s + n;
 	for (; s < ends; s++)
-		if (*(const unsigned char *) s == (unsigned char) c)
+		if (*(const unsigned char *)s == (unsigned char)c)
 			break;
-	return (void *) s;
+	return (void *)s;
 }
 
-long
-strtol(const char *s, char **endptr, int base)
+long strtol(const char *s, char **endptr, int base)
 {
 	int neg = 0;
 	long val = 0;
@@ -261,7 +264,8 @@ strtol(const char *s, char **endptr, int base)
 		base = 10;
 
 	// digits
-	while (1) {
+	while (1)
+	{
 		int dig;
 
 		if (*s >= '0' && *s <= '9')
@@ -279,30 +283,31 @@ strtol(const char *s, char **endptr, int base)
 	}
 
 	if (endptr)
-		*endptr = (char *) s;
+		*endptr = (char *)s;
 	return (neg ? -val : val);
 }
 
-char * strstr(const char *in, const char *str)
+char *strstr(const char *in, const char *str)
 {
-    char c;
-    size_t len;
+	char c;
+	size_t len;
 
-    c = *str++;
-    if (!c)
-        return (char *) in;	// Trivial empty string case
+	c = *str++;
+	if (!c)
+		return (char *)in; // Trivial empty string case
 
-    len = strlen(str);
-    do {
-        char sc;
+	len = strlen(str);
+	do
+	{
+		char sc;
 
-        do {
-            sc = *in++;
-            if (!sc)
-                return (char *) 0;
-        } while (sc != c);
-    } while (strncmp(in, str, len) != 0);
+		do
+		{
+			sc = *in++;
+			if (!sc)
+				return (char *)0;
+		} while (sc != c);
+	} while (strncmp(in, str, len) != 0);
 
-    return (char *) (in - 1);
+	return (char *)(in - 1);
 }
-

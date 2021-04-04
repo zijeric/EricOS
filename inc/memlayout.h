@@ -1,5 +1,5 @@
-#ifndef JOS_INC_MEMLAYOUT_H
-#define JOS_INC_MEMLAYOUT_H
+#ifndef ALVOS_INC_MEMLAYOUT_H
+#define ALVOS_INC_MEMLAYOUT_H
 
 #ifndef __ASSEMBLER__
 #include "inc/types.h"
@@ -180,7 +180,7 @@ typedef uint64_t pte_t;
 typedef uint64_t pde_t;
 
 // 由用户态的环境使用
-#if JOS_USER
+#if ALVOS_USER
 /*
  * 页目录项对应的虚拟地址范围[UVPT, UVPT + PTSIZE)指向页目录本身
  * 因此，页目录既是页表，也是页目录
@@ -221,4 +221,4 @@ struct PageInfo
 };
 
 #endif /* !__ASSEMBLER__ */
-#endif /* !JOS_INC_MEMLAYOUT_H */
+#endif

@@ -1,5 +1,5 @@
 /*
- * JOS file system format
+ * AlvOS file system format
  */
 
 // We don't actually want to define off_t!
@@ -22,7 +22,7 @@
 
 // Prevent inc/types.h, included from inc/fs.h,
 // from attempting to redefine types defined in the host's inttypes.h.
-#define JOS_INC_TYPES_H
+#define ALVOS_INC_TYPES_H
 // Typedef the types that inc/mmu.h needs.
 typedef uint32_t physaddr_t;
 typedef uint32_t off_t;

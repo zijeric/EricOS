@@ -5,8 +5,8 @@
  * 要运行一个环境，内核必须为它设置合适的寄存器的值和合适的地址空间
  * 在 AlvOS 系统中，任意时刻只能有一个环境处于活跃状态，因此 AlvOS 内核只需要一个内核栈
  */
-#ifndef JOS_INC_ENV_H
-#define JOS_INC_ENV_H
+#ifndef ALVOS_INC_ENV_H
+#define ALVOS_INC_ENV_H
 
 #include "inc/types.h"
 #include "inc/trap.h"
@@ -146,4 +146,4 @@ struct Env
 	uint8_t *elf;
 };
 
-#endif // !JOS_INC_ENV_H
+#endif

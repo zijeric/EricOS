@@ -2,8 +2,8 @@
  * 解决变参问题的宏
  */
 
-#ifndef JOS_INC_STDARG_H
-#define JOS_INC_STDARG_H
+#ifndef ALVOS_INC_STDARG_H
+#define ALVOS_INC_STDARG_H
 
 // va_list 型变量，指向参数的指针 argument pointer
 typedef __builtin_va_list va_list;
@@ -26,4 +26,4 @@ typedef __builtin_va_list va_list;
 // va_copy 将
 #define va_copy(dst, src) __builtin_va_copy(dst, src)
 
-#endif /* !JOS_INC_STDARG_H */
+#endif

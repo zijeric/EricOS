@@ -1,5 +1,5 @@
-#ifndef JOS_INC_MMU_H
-#define JOS_INC_MMU_H
+#ifndef ALVOS_INC_MMU_H
+#define ALVOS_INC_MMU_H
 
 /*TODO
  * 这个文件包含x86内存管理单元(MMU)的定义，包括与分页和分段相关的数据结构和常量、%cr0、%cr4、%eflags 寄存器和陷阱相关定义.
@@ -382,4 +382,4 @@ struct Pseudodesc
 
 #endif /* !__ASSEMBLER__ */
 
-#endif /* !JOS_INC_MMU_H */
+#endif

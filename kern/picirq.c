@@ -1,9 +1,7 @@
-/* See COPYRIGHT for copyright information. */
+#include "inc/assert.h"
+#include "inc/trap.h"
 
-#include <inc/assert.h>
-#include <inc/trap.h>
-
-#include <kern/picirq.h>
+#include "kern/picirq.h"
 
 
 // Current IRQ mask.

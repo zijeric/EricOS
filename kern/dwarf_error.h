@@ -1,3 +1,6 @@
+/*
+ * 以下代码参考 libdwarf 的实现，https://github.com/DynamoRIO/dynamorio/blob/master/ext/drsyms/libelftc/include/libdwarf.h
+ */
 #ifndef DWARF_ERROR_H_
 #define DWARF_ERROR_H_
 
@@ -5,6 +8,9 @@
 #define DW_DLV_OK         0
 #define DW_DLV_ERROR      1
 
+/*
+ * Error numbers which are specific to this implementation.
+ */
 enum {
         DW_DLE_NONE,                    /* No error. */
         DW_DLE_ERROR,                   /* An error! */

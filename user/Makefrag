@@ -1,6 +1,6 @@
 OBJDIRS += user
 
-USERLIBS = jos
+USERLIBS = alvos
 
 $(OBJDIR)/user/%.o: user/%.c $(OBJDIR)/.vars.USER_CFLAGS
 	@echo + cc[USER] $<

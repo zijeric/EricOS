@@ -1,5 +1,5 @@
-#ifndef JOS_INC_TRAP_H
-#define JOS_INC_TRAP_H
+#ifndef ALVOS_INC_TRAP_H
+#define ALVOS_INC_TRAP_H
 
 // 中断向量
 // 这些是由CPU定义的:
@@ -108,4 +108,4 @@ struct UTrapframe {
 
 #endif /* !__ASSEMBLER__ */
 
-#endif /* !JOS_INC_TRAP_H */
+#endif

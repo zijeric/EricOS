@@ -1,6 +1,9 @@
+/*
+ * 以下代码参考 libdwarf 的实现，
+ */
 #ifndef DWARF_API_H
 #define DWARF_API_H
-#include <kern/kdebug.h>
+#include "kern/kdebug.h"
 
 extern uintptr_t read_section_headers(uintptr_t, uintptr_t);
 extern void find_debug_sections(uintptr_t);

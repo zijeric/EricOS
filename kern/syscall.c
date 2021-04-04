@@ -1,128 +1,141 @@
-/* See COPYRIGHT for copyright information. */
+// 系统调用实现代码
+#include "inc/x86.h"
+#include "inc/error.h"
+#include "inc/string.h"
+#include "inc/assert.h"
 
-#include <inc/x86.h>
-#include <inc/error.h>
-#include <inc/string.h>
-#include <inc/assert.h>
+#include "kern/env.h"
+#include "kern/pmap.h"
+#include "kern/trap.h"
+#include "kern/syscall.h"
+#include "kern/console.h"
+#include "kern/sched.h"
 
-#include <kern/env.h>
-#include <kern/pmap.h>
-#include <kern/trap.h>
-#include <kern/syscall.h>
-#include <kern/console.h>
-#include <kern/sched.h>
-
-// Print a string to the system console.
-// The string is exactly 'len' characters long.
-// Destroys the environment on memory errors.
+/**
+ * 将字符串s打印到系统控制台，字符串长度正好是len个字符
+ * 无权限访问内存就销毁环境
+ */
 static void
 sys_cputs(const char *s, size_t len)
 {
-	// Check that the user has permission to read memory [s, s+len).
-	// Destroy the environment if not.
-
-	// LAB 3: Your code here.
+	// 调用user_mem_assert检查用户是否有权限读取内存[s, s+len]，如果没有就销毁环境
 	user_mem_assert(curenv, s, len, PTE_U);
-	// Print the string supplied by the user.
+
+	// 打印用户提供的字符串.
 	cprintf("%.*s", len, s);
 }
 
-// Read a character from the system console without blocking.
-// Returns the character, or 0 if there is no input waiting.
+/**
+ * 在不阻塞的情况下从系统控制台读取字符
+ * 返回字符，如果没有输入等待，则返回0
+ */
 static int
 sys_cgetc(void)
 {
 	return cons_getc();
 }
 
-// Returns the current environment's envid.
+/**
+ * 返回当前环境的 envid.
+ */
 static envid_t
 sys_getenvid(void)
 {
 	return curenv->env_id;
 }
 
-// Destroy a given environment (possibly the currently running environment).
-//
-// Returns 0 on success, < 0 on error.  Errors are:
-//	-E_BAD_ENV if environment envid doesn't currently exist,
-//		or the caller doesn't have permission to change envid.
+/**
+ * 销毁envid对应的环境(也可以是当前运行的环境)
+ * 
+ * 成功返回0，错误返回: -E_BAD_ENV(当前环境envid不存在/调用者没有修改envid的权限)
+ */
 static int
 sys_env_destroy(envid_t envid)
 {
 	int r;
 	struct Env *e;
 
+	// 当前环境envid不存在/调用者没有修改envid的权限
 	if ((r = envid2env(envid, &e, 1)) < 0)
 		return r;
+	// // 当前运行的环境
+	// if (e == curenv)
+	// 	cprintf("[%08x] exiting gracefully\n", curenv->env_id);
+	// // 非当前环境
+	// else
+	// 	cprintf("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
+
+	// 销毁
 	env_destroy(e);
 	return 0;
 }
 
-// Deschedule current environment and pick a different one to run.
+// 取消当前环境调度，并选择一个不同的环境运行.
 static void
 sys_yield(void)
 {
 	sched_yield();
 }
 
-// Allocate a new environment.
-// Returns envid of new environment, or < 0 on error.  Errors are:
-//	-E_NO_FREE_ENV if no free environment is available.
-//	-E_NO_MEM on memory exhaustion.
+/**
+ * 创建一个子环境，寄存器集与父环境相同，状态设置为 ENV_NOT_RUNNABLE
+ * 父环境返回新环境的 envid, 出错则返回负的错误代码: -E_NO_FREE_ENV, -E_NO_MEM
+ * 子环境返回0.
+ */
 static envid_t
 sys_exofork(void)
 {
-	// Create the new environment with env_alloc(), from kern/env.c.
-	// It should be left as env_alloc created it, except that
-	// status is set to ENV_NOT_RUNNABLE, and the register set is copied
-	// from the current environment -- but tweaked so sys_exofork
-	// will appear to return 0.
+	/**
+	 * 调用 env_alloc() 创建新环境.
+	 * 调用后, 新环境除了设置状态为 ENV_NOT_RUNNABLE, 寄存器集从当前环境复制, 父id外, 其他保持不变.
+	 */
 
-	// LAB 4: Your code here.
-	struct Env* child;
-	int r = env_alloc(&child, curenv->env_id);
-	if(r < 0) {
-		cprintf("\nenv_alloc, sys_exofork %e \n",r);
-		return r;
+	// 创建子环境
+	struct Env *child;
+	int result = env_alloc(&child, curenv->env_id);
+	if (result < 0)
+	{
+		cprintf("sys_exofork(): %e \n", result);
+		return result;
 	}
+	// 设置子环境状态为 ENV_NOT_RUNNABLE
 	child->env_status = ENV_NOT_RUNNABLE;
+	// 寄存器集从当前环境复制, 不再为子环境分配栈
 	child->env_tf = curenv->env_tf;
-	child->env_tf.tf_regs.reg_rax = 0; //setting return value for child
+	// 为子环境设置返回值 0
+	child->env_tf.tf_regs.reg_rax = 0;
+	// 子环境的父id
 	child->env_parent_id = curenv->env_id;
+	// 返回子环境的id
 	return child->env_id;
-	//panic("sys_exofork not implemented");
 }
 
-// Set envid's env_status to status, which must be ENV_RUNNABLE
-// or ENV_NOT_RUNNABLE.
-//
-// Returns 0 on success, < 0 on error.  Errors are:
-//	-E_BAD_ENV if environment envid doesn't currently exist,
-//		or the caller doesn't have permission to change envid.
-//	-E_INVAL if status is not a valid status for an environment.
+/**
+ * 环境的地址映射和寄存器状态初始化之后，修改环境状态为(ENV_RUNNABLE 或 ENV_NOT_RUNNABLE)
+ * 
+ * 成功返回0, 错误返回负的错误代码:
+ *  -E_BAD_ENV: envid 不存在, 或调用者没有修改 envid环境的权限
+ *  -E_INVAL: status 无效
+ */
 static int
 sys_env_set_status(envid_t envid, int status)
 {
-	// Hint: Use the 'envid2env' function from kern/env.c to translate an
-	// envid to a struct Env.
-	// You should set envid2env's third argument to 1, which will
-	// check whether the current environment has permission to set
-	// envid's status.	
-	if((status != ENV_RUNNABLE) && (status != ENV_NOT_RUNNABLE)) {
-		cprintf("\n improper status %e\n", -E_INVAL);
+	if ((status != ENV_RUNNABLE) && (status != ENV_NOT_RUNNABLE))
+	{
+		cprintf("sys_env_set_status(): improper status %e\n", -E_INVAL);
 		return -E_INVAL;
 	}
-	struct Env* envnow;
-	int r = envid2env(envid, &envnow, 1);
-	if(r < 0) {
-		cprintf("\n envid2env %e\n", r);
-		return r;
+	struct Env *env;
+	// 调用 envid2env() 赋值 envid 对应的环境结构指针到参数 env
+	int result = envid2env(envid, &env, 1);
+	if (result < 0)
+	{
+		cprintf("envid2env(): %e\n", result);
+		return result;
 	}
-	envnow->env_status = status;
+	// 修改环境的 status
+	env->env_status = status;
 	return 0;
-	// LAB 4: Your code here.
-	//panic("sys_env_set_status not implemented");
 }
 
 // Set envid's trap frame to 'tf'.
@@ -138,259 +151,248 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
-    struct Env *envnow;
-    int r = envid2env(envid, &envnow, 1); 
-    if (r<0) {
-        cprintf("\n bad ENvid sys_env_set_pgfault_upcall %e \n",r);
-        return r;
-    }
-    envnow->env_tf = *tf;
+	struct Env *envnow;
+	int r = envid2env(envid, &envnow, 1);
+	if (r < 0)
+	{
+		cprintf("\n bad ENvid sys_env_set_pgfault_upcall %e \n", r);
+		return r;
+	}
+	envnow->env_tf = *tf;
 	envnow->env_tf.tf_cs |= 3;
-   	envnow->env_tf.tf_eflags |= FL_IF;
+	envnow->env_tf.tf_eflags |= FL_IF;
 
-    return 0;
+	return 0;
 }
 
-// Set the page fault upcall for 'envid' by modifying the corresponding struct
-// Env's 'env_pgfault_upcall' field.  When 'envid' causes a page fault, the
-// kernel will push a fault record onto the exception stack, then branch to
-// 'func'.
-//
-// Returns 0 on success, < 0 on error.  Errors are:
-//	-E_BAD_ENV if environment envid doesn't currently exist,
-//		or the caller doesn't have permission to change envid.
+/**
+ * sys_env_set_pgfault_upcall() 将用户态的页错误处理函数注册到环境结构(为参数环境设置 env_pgfault_upcall)
+ * 缺页中断发生时，用户栈切换到用户异常栈，并且 push UTrapframe 结构，执行 env_pgfault_upcall 指定位置的代码
+ * 成功返回0, 错误返回负的错误代码:
+ *  -E_BAD_ENV: envid 不存在, 或调用者没有修改 envid环境的权限
+ */
 static int
 sys_env_set_pgfault_upcall(envid_t envid, void *func)
 {
 	struct Env *newenv;
+	// 获取 envid 对应的环境结构，并检查操作权限
 	int r = envid2env(envid, &newenv, 1);
-	if (r<0) {
-		cprintf("\n bad ENvid sys_env_set_pgfault_upcall %e \n",r);
+	if (r < 0)
+	{
+		cprintf("sys_env_set_pgfault_upcall(): bad envid %e.\n", r);
 		return r;
 	}
+	// 设置页错误向上调用的entry point
 	newenv->env_pgfault_upcall = func;
 	return 0;
-	// LAB 4: Your code here.
-	//panic("sys_env_set_pgfault_upcall not implemented");
 }
 
-// Allocate a page of memory and map it at 'va' with permission
-// 'perm' in the address space of 'envid'.
-// The page's contents are set to 0.
-// If a page is already mapped at 'va', that page is unmapped as a
-// side effect.
-//
-// perm -- PTE_U | PTE_P must be set, PTE_AVAIL | PTE_W may or may not be set,
-//         but no other bits may be set.  See PTE_SYSCALL in inc/mmu.h.
-//
-// Return 0 on success, < 0 on error.  Errors are:
-//	-E_BAD_ENV if environment envid doesn't currently exist,
-//		or the caller doesn't have permission to change envid.
-//	-E_INVAL if va >= UTOP, or va is not page-aligned.
-//	-E_INVAL if perm is inappropriate (see above).
-//	-E_NO_MEM if there's no memory to allocate the new page,
-//		or to allocate any necessary page tables.
+/**
+ * 分配一页物理内存，并将其以 perm 权限映射 envid 环境 va 所对应的地址空间
+ * 对 pmap.c 中 page_alloc() 和 page_insert() 的封装
+ * - 参数 perm 为 envid 对应环境的地址空间权限
+ * - 清零页内容，防止脏数据产生异常
+ * - 如果一个页已经映射到参数 va，那么该页将作为副作用取消映射
+ * - 必须设置 perm -- PTE_U | PTE_P, PTE_AVAIL | PTE_W 可选，其他不可设置
+ * 
+ * 成功返回0，错误返回负数错误码:
+ *  -E_BAD_ENV: envid 不存在，或调用者没有修改 envid环境的权限
+ *  -E_INVAL: va>=UTOP，或 va 不是页对齐，或 perm 不符合
+ *  -E_NO_MEM
+ */
 static int
 sys_page_alloc(envid_t envid, void *va, int perm)
 {
-	// Hint: This function is a wrapper around page_alloc() and
-	//   page_insert() from kern/pmap.c.
-	//   Most of the new code you write should be to check the
-	//   parameters for correctness.
-	//   If page_insert() fails, remember to free the page you
-	//   allocated!
-	struct Env* envnow;
+	// sys_page_alloc() 是对 page_alloc() 和 page_insert() 的封装
+	//   但新增检查参数的正确性.
+	// 如果 page_insert() 失败，会释放分配的物理页!
+	struct Env *envnow;
 	int r = envid2env(envid, &envnow, 1);
-	if(r<0){
-		cprintf("\nenvid2end sys_page_alloc %e \n", r);
+	if (r < 0)
+	{
+		cprintf("sys_page_alloc(): %e.\n", r);
 		return r;
 	}
+	// 分配一个空闲物理页
 	struct PageInfo *pp = page_alloc(0);
-	if (!pp) {
-		cprintf("\n No memory to allocate page SYS_PAGE_ALLOC %e \n", -E_NO_MEM);
+	// 以下为错误检查
+	if (!pp)
+	{
+		cprintf("sys_page_alloc(): No memory to allocate page SYS_PAGE_ALLOC %e.\n", -E_NO_MEM);
 		return -E_NO_MEM;
 	}
 	if ((uint64_t)va >= UTOP || PGOFF(va))
-    	return -E_INVAL;
+		return -E_INVAL;
 
 	int newperm = PTE_U | PTE_P;
-	if ((perm & newperm) != newperm || (perm & ~PTE_SYSCALL)) {
-		cprintf("\n permission error %e sys_page_alloc\n", -E_INVAL);
+	if ((perm & newperm) != newperm || (perm & ~PTE_SYSCALL))
+	{
+		cprintf("sys_page_alloc(): permission error %e.\n", -E_INVAL);
 		return -E_INVAL;
 	}
-	if (page_insert(envnow->env_pml4e, pp, va, perm) < 0) {
-		cprintf("\n No memory to allocate page SYS_PAGE_ALLOC %e \n", -E_NO_MEM);
+	// 在内核4级页表，建立页表页的映射及权限，映射物理页到虚拟地址 va, 页表项的权限(低12位)设置为 perm|PTE_P
+	if (page_insert(envnow->env_pml4e, pp, va, perm) < 0)
+	{
+		cprintf("sys_page_alloc(): No memory to allocate page SYS_PAGE_ALLOC %e.\n", -E_NO_MEM);
+		// 内存不足则释放页结点回 page_free_list
 		page_free(pp);
 		return -E_NO_MEM;
 	}
-	//memset(page2kva(pp), 0, PGSIZE);	
+	// 将对应物理页清零
+	//memset(page2kva(pp), 0, PGSIZE);
 	return 0;
-	// LAB 4: Your code here.
-	// panic("sys_page_alloc not implemented");
 }
 
-// Map the page of memory at 'srcva' in srcenvid's address space
-// at 'dstva' in dstenvid's address space with permission 'perm'.
-// Perm has the same restrictions as in sys_page_alloc, except
-// that it also must not grant write access to a read-only
-// page.
-//
-// Return 0 on success, < 0 on error.  Errors are:
-//	-E_BAD_ENV if srcenvid and/or dstenvid doesn't currently exist,
-//		or the caller doesn't have permission to change one of them.
-//	-E_INVAL if srcva >= UTOP or srcva is not page-aligned,
-//		or dstva >= UTOP or dstva is not page-aligned.
-//	-E_INVAL is srcva is not mapped in srcenvid's address space.
-//	-E_INVAL if perm is inappropriate (see sys_page_alloc).
-//	-E_INVAL if (perm & PTE_W), but srcva is read-only in srcenvid's
-//		address space.
-//	-E_NO_MEM if there's no memory to allocate any necessary page tables.
+/**
+ * 将 srcenvid 地址空间中 srcva 的内存页映射到 dstenvid 地址空间中的 dstva，并设置页属性 perm
+ * 从而两个环境以不同的权限访问同一个物理页(并非数据拷贝，而是共享一个页的地址，提高效率，增强系统灵活性)
+ * 	-E_BAD_ENV: envid 不存在，或调用者没有修改 envid环境的权限
+ * 	-E_INVAL: srcva/dstva>=UTOP，或 srcva/dstva 不是页对齐，或 perm 不符合
+ * 	-E_INVAL: srcva 没有映射到 srcenvid 的地址空间
+ * 	-E_INVAL: if (perm & PTE_W)，但是 srcva 是 srcenvid 的只读地址空间
+ * 	-E_NO_MEM
+ */
 static int
 sys_page_map(envid_t srcenvid, void *srcva,
-	     envid_t dstenvid, void *dstva, int perm)
+			 envid_t dstenvid, void *dstva, int perm)
 {
-	// Hint: This function is a wrapper around page_lookup() and
-	//   page_insert() from kern/pmap.c.
-	//   Again, most of the new code you write should be to check the
-	//   parameters for correctness.
-	//   Use the third argument to page_lookup() to
-	//   check the current permissions on the page.
+	// sys_page_alloc() 是对 page_lookup() 和 page_insert() 的封装.
+	//   但新增检查参数的正确性.
+	//   使用 page_lookup() 的第三个参数检查物理页的权限.
+	// 通过 srcenvid/dstenvid 获取源环境和目标环境获，并检查权限
 	struct Env *srcenv, *dstenv;
 	int r1 = envid2env(srcenvid, &srcenv, 1);
 	int r2 = envid2env(dstenvid, &dstenv, 1);
-	/* Proper envid check*/
-	if (r1 < 0 || r2 < 0) {
-		cprintf("\n envid2env error %e, %e sys_page_map\n", r1, r2);
+	// 检查 srcenvid/dstenvid 的正确性
+	if (r1 < 0 || r2 < 0)
+	{
+		cprintf("sys_page_map(): envid2env error %e, %e.\n", r1, r2);
 		return -E_BAD_ENV;
 	}
-	/*Address range check*/
-	if((uintptr_t)srcva >= UTOP || (uintptr_t)dstva >= UTOP || PGOFF(srcva) || PGOFF(dstva)) {
+	// 检查 srcva/dstva 的地址空间范围(<=UTOP 且 只有 PGSIZE 大小)
+	if ((uintptr_t)srcva >= UTOP || (uintptr_t)dstva >= UTOP || PGOFF(srcva) || PGOFF(dstva))
+	{
 		cprintf("\n envid2env error %e sys_page_map\n", -E_INVAL);
 		return -E_INVAL;
 	}
-	/*Correct page request check*/
+	// 检查页请求是否正确 (srcva 是否映射到 srcenvid 的地址空间)
 	struct PageInfo *map;
 	pte_t *p_entry;
+	// 在页式地址转换机制中查找 secenv 4级页表的线性地址 srcva 所对应的物理页
 	map = page_lookup(srcenv->env_pml4e, srcva, &p_entry);
-	if(!map) {
+	if (!map)
+	{
 		cprintf("\n No page available or not mapped properly SYS_PAGE_ALLOC %e \n", -E_NO_MEM);
 		return -E_NO_MEM;
 	}
-	/*Proper Permission check*/
+	// 检查权限是否符合
 	int map_perm = PTE_P | PTE_U;
-	if ((perm & map_perm) != map_perm || (perm & ~PTE_SYSCALL)) {
-		cprintf("\n permission error %e sys_page_map\n", -E_INVAL);
+	if ((perm & map_perm) != map_perm || (perm & ~PTE_SYSCALL))
+	{
+		cprintf("sys_page_map(): permission error %e.\n", -E_INVAL);
 		return -E_INVAL;
 	}
-	if((perm & PTE_W) && !(*p_entry & PTE_W)) {
-		cprintf("\n permission error %e sys_page_map\n", -E_INVAL);
+	if ((perm & PTE_W) && !(*p_entry & PTE_W))
+	{
+		cprintf("sys_page_map(): permission error %e.\n", -E_INVAL);
 		return -E_INVAL;
 	}
-	/*Page insert check*/
-	if(page_insert(dstenv->env_pml4e, map, dstva, perm) < 0) {
+	// 建立页表页的映射及权限，将物理页 map 映射到虚拟地址 dstva, 页表项的权限(低12位)设置为'perm|PTE_P'
+	if (page_insert(dstenv->env_pml4e, map, dstva, perm) < 0)
+	{
 		cprintf("\n No memory to allocate page SYS_PAGE_MAP %e \n", -E_NO_MEM);
 		return -E_NO_MEM;
 	}
 	return 0;
-	// LAB 4: Your code here.
-	//panic("sys_page_map not implemented");
 }
 
-// Unmap the page of memory at 'va' in the address space of 'envid'.
-// If no page is mapped, the function silently succeeds.
-//
-// Return 0 on success, < 0 on error.  Errors are:
-//	-E_BAD_ENV if environment envid doesn't currently exist,
-//		or the caller doesn't have permission to change envid.
-//	-E_INVAL if va >= UTOP, or va is not page-aligned.
+/**
+ * 取消环境 envid 地址空间中线性地址 va 所对应页的映射，即删除线性地址 va 所对应的物理页
+ * 成功时返回0，错误时返回负的错误码
+ * 	-E_BAD_ENV: envid 不存在，或调用者没有修改 envid环境的权限
+ * 	-E_INVAL: va>=UTOP，或 va 不是页对齐
+ */
 static int
 sys_page_unmap(envid_t envid, void *va)
 {
-	// Hint: This function is a wrapper around page_remove().
-	struct Env* envnow;
+	// sys_page_unmap() 是对 page_remove() 的封装.
+	struct Env *envnow;
+	// 通过 envid 获取环境结构，并检查权限
 	int r = envid2env(envid, &envnow, 1);
-	if(r < 0) {
+	if (r < 0)
+	{
 		cprintf("\n envid2env error %e sys_page_map\n", r);
 		return r;
 	}
 	if ((uint64_t)va >= UTOP || PGOFF(va))
-    	return -E_INVAL;
+		return -E_INVAL;
+	// 删除 va 对应物理页帧映射，取消物理地址映射的虚拟地址，将映射页表中对应的项清零
 	page_remove(envnow->env_pml4e, va);
 	return 0;
-	// LAB 4: Your code here.
-	//panic("sys_page_unmap not implemented");
 }
 
-// Try to send 'value' to the target env 'envid'.
-// If srcva < UTOP, then also send page currently mapped at 'srcva',
-// so that receiver gets a duplicate mapping of the same page.
-//
-// The send fails with a return value of -E_IPC_NOT_RECV if the
-// target is not blocked, waiting for an IPC.
-//
-// The send also can fail for the other reasons listed below.
-//
-// Otherwise, the send succeeds, and the target's ipc fields are
-// updated as follows:
-//    env_ipc_recving is set to 0 to block future sends;
-//    env_ipc_from is set to the sending envid;
-//    env_ipc_value is set to the 'value' parameter;
-//    env_ipc_perm is set to 'perm' if a page was transferred, 0 otherwise.
-// The target environment is marked runnable again, returning 0
-// from the paused sys_ipc_recv system call.  (Hint: does the
-// sys_ipc_recv function ever actually return?)
-//
-// If the sender wants to send a page but the receiver isn't asking for one,
-// then no page mapping is transferred, but no error occurs.
-// The ipc only happens when no errors occur.
-//
-// Returns 0 on success, < 0 on error.
-// Errors are:
-//	-E_BAD_ENV if environment envid doesn't currently exist.
-//		(No need to check permissions.)
-//	-E_IPC_NOT_RECV if envid is not currently blocked in sys_ipc_recv,
-//		or another environment managed to send first.
-//	-E_INVAL if srcva < UTOP but srcva is not page-aligned.
-//	-E_INVAL if srcva < UTOP and perm is inappropriate
-//		(see sys_page_alloc).
-//	-E_INVAL if srcva < UTOP but srcva is not mapped in the caller's
-//		address space.
-//	-E_INVAL if (perm & PTE_W), but srcva is read-only in the
-//		current environment's address space.
-//	-E_NO_MEM if there's not enough memory to map srcva in envid's
-//		address space.
+/**
+ * 发送一个消息到 envid 环境，当 srcva 为0时，传送64-bit，否则传送一页(可以传递更多数据，方便地设置和安排内存共享)
+ * 传送一页，即将当前环境 srcva 地址处的页映射到接收环境同一地址处
+ * 详细：
+ * 如果srcva < UTOP，那么也发送当前映射在 srcva 的页面，这样接收者得到相同页的重复映射
+ * 如果目标没有被阻塞，则发送失败，返回值为 -E_IPC_NOT_RECV，等待IPC
+ * 发送失败也可能是下面列出的其他原因：
+ * 否则，发送成功，目标的IPC字段更新如下:
+ * - env_ipc_recving 被设置为0来阻止未来的发送;
+ * - env_ipc_from 被设置为发送 envid;
+ * - env_ipc_value 被设置为参数 value;
+ * - env_ipc_perm 设置为'perm'如果页面被传输，否则0
+ * 目标环境再次被标记为可运行的，从暂停的sys_ipc_recv系统调用返回0。(提示:sys_ipc_recv函数是否实际返回?)
+ * 如果发送方想要发送一个页面，但接收方没有请求，那么就不会传输页面映射，但也不会发生错误。只有当没有错误发生时，IPC才会发生
+ * 成功返回0，错误返回负数错误码：
+ *  -E_BAD_ENV 如果环境envid当前不存在(不需要检查权限)
+ *  -E_IPC_NOT_RECV 如果envid当前在sys_ipc_recv中没有阻塞，或者另一个环境管理首先发送
+ *  -E_INVAL: 
+ *    1.如果srcva < UTOP和perm不合适(参见sys_page_alloc)
+ *    2.如果srcva < UTOP，但是srcva没有映射到调用者的地址空间
+ *    3. if (perm & PTE_W)，但是srcva在当前环境的地址空间中是只读的
+ *  -E_NO_MEM 如果envid的地址空间没有足够的内存来映射srcva
+ */
 static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	struct Env *recvr;
-	int r = envid2env(envid, &recvr, 0);	
-	if (r < 0) {
+	int r = envid2env(envid, &recvr, 0);
+	if (r < 0)
+	{
 		cprintf("\n Bad ENV\n");
 		return r;
 	}
-	if (recvr->env_ipc_recving == 0) {
+	if (recvr->env_ipc_recving == 0)
+	{
 		return -E_IPC_NOT_RECV;
 	}
 	recvr->env_ipc_recving = 0;
 	recvr->env_ipc_from = curenv->env_id;
 	recvr->env_ipc_perm = 0;
-	if((srcva && (srcva < (void*)UTOP)) && ((recvr->env_ipc_dstva) && (recvr->env_ipc_dstva < (void*)UTOP))){
-		if(PGOFF(srcva)) {
+	if ((srcva && (srcva < (void *)UTOP)) && ((recvr->env_ipc_dstva) && (recvr->env_ipc_dstva < (void *)UTOP)))
+	{
+		if (PGOFF(srcva))
+		{
 			cprintf("\n Not pageAligned\n");
 			return -E_INVAL;
 		}
 		int map_perm = PTE_U | PTE_P;
-		if(((perm & map_perm) != map_perm) || (perm & ~PTE_SYSCALL)) {
+		if (((perm & map_perm) != map_perm) || (perm & ~PTE_SYSCALL))
+		{
 			cprintf("\nPermission error\n");
 			return -E_INVAL;
 		}
-		pte_t* entry;
+		pte_t *entry;
 		struct PageInfo *map = page_lookup(curenv->env_pml4e, srcva, &entry);
-		if(!(map) || ((perm & PTE_W) && !(*entry & PTE_W))) {
+		if (!(map) || ((perm & PTE_W) && !(*entry & PTE_W)))
+		{
 			cprintf("\n VA is not mapped in senders address space or Sending read only pages with write permissions not permissible\n");
 			return -E_INVAL;
 		}
-		if(page_insert(recvr->env_pml4e, map, recvr->env_ipc_dstva , perm) < 0) {
+		if (page_insert(recvr->env_pml4e, map, recvr->env_ipc_dstva, perm) < 0)
+		{
 			cprintf("\n No memory to map the page to target env\n");
 			return -E_NO_MEM;
 		}
@@ -399,59 +401,53 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	recvr->env_ipc_value = value;
 	recvr->env_status = ENV_RUNNABLE;
 	return 0;
-	// LAB 4: Your code here.
-	// panic("sys_ipc_try_send not implemented");
 }
 
-// Block until a value is ready.  Record that you want to receive
-// using the env_ipc_recving and env_ipc_dstva fields of struct Env,
-// mark yourself not runnable, and then give up the CPU.
-//
-// If 'dstva' is < UTOP, then you are willing to receive a page of data.
-// 'dstva' is the virtual address at which the sent page should be mapped.
-//
-// This function only returns on error, but the system call will eventually
-// return 0 on success.
-// Return < 0 on error.  Errors are:
-//	-E_INVAL if dstva < UTOP but dstva is not page-aligned.
+/**
+ * 取消环境的执行，直到接收到消息
+ * 使用struct Env的env_ipc_recving和env_ipc_dstva字段记录您想接收的数据，标记自己不可运行，然后放弃CPU
+ * 如果'dstva'是< UTOP，那么你愿意接收一个页面的数据。“dstva”是应将发送页面映射到的虚拟地址
+ * 这个函数只在出错时返回，但是系统调用最终会在成功时返回0
+ * 错误时返回< 0。错误:
+ *   -E_INVAL: 如果dstva < UTOP，但是dstva不是页面对齐的
+ */
 static int
 sys_ipc_recv(void *dstva)
 {
 	curenv->env_ipc_recving = 1;
-	if(dstva < (void*)UTOP) {
-		if(PGOFF(dstva))
+	if (dstva < (void *)UTOP)
+	{
+		if (PGOFF(dstva))
 			return -E_INVAL;
-	}	
+	}
 	curenv->env_ipc_dstva = dstva;
 	curenv->env_status = ENV_NOT_RUNNABLE;
 	curenv->env_tf.tf_regs.reg_rax = 0;
 	sched_yield();
-	// LAB 4: Your code here.
-	//panic("sys_ipc_recv not implemented");
 	return 0;
 }
 
-
-
-
-// Dispatches to the correct kernel function, passing the arguments.
+/**
+ * syscall函数: 根据 syscallno 分派到对应的内核调用处理函数，并传递参数.
+ * 参数:
+ * syscallno: 系统调用序号(inc/syscall.h)，告诉内核要使用那个处理函数，进入寄存器eax
+ * a1~a5: 传递给内核处理函数的参数，进入剩下的寄存器edx, ecx, ebx, edi, esi
+ * 这些寄存器都在中断产生时被压栈了，可以通过Trapframe访问到
+ */
 int64_t
 syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, uint64_t a5)
 {
-	// Call the function corresponding to the 'syscallno' parameter.
-	// Return any appropriate return value.
-	// LAB 3: Your code here.
-
-	//panic("syscall not implemented");
-	switch (syscallno) {
-	case SYS_cputs :
+	// 调用对应于'syscallno'参数的函数. (0~12)
+	switch (syscallno)
+	{
+	case SYS_cputs:
 		sys_cputs((const char *)a1, (size_t)a2);
 		return 0;
-	case SYS_cgetc :
+	case SYS_cgetc:
 		return sys_cgetc();
-	case SYS_getenvid :
+	case SYS_getenvid:
 		return sys_getenvid();
-	case SYS_env_destroy :
+	case SYS_env_destroy:
 		return sys_env_destroy(a1);
 	case SYS_yield:
 		sys_yield();
@@ -460,21 +456,20 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 	case SYS_env_set_status:
 		return sys_env_set_status((envid_t)a1, (int)a2);
 	case SYS_page_alloc:
-		return sys_page_alloc((envid_t)a1, (void*)a2, (int)a3);
+		return sys_page_alloc((envid_t)a1, (void *)a2, (int)a3);
 	case SYS_page_map:
-		return sys_page_map((envid_t)a1, (void *)a2,(envid_t) a3, (void *)a4, (int) a5);
+		return sys_page_map((envid_t)a1, (void *)a2, (envid_t)a3, (void *)a4, (int)a5);
 	case SYS_page_unmap:
-		return sys_page_unmap((envid_t)a1, (void*)a2);
+		return sys_page_unmap((envid_t)a1, (void *)a2);
 	case SYS_env_set_pgfault_upcall:
-		return sys_env_set_pgfault_upcall((envid_t)a1, (void*)a2);
+		return sys_env_set_pgfault_upcall((envid_t)a1, (void *)a2);
 	case SYS_ipc_try_send:
-		return sys_ipc_try_send((envid_t)a1, (uint32_t)a2, (void*)a3, (unsigned)a4);
+		return sys_ipc_try_send((envid_t)a1, (uint32_t)a2, (void *)a3, (unsigned)a4);
 	case SYS_ipc_recv:
-		return sys_ipc_recv((void*)a1);
+		return sys_ipc_recv((void *)a1);
 	case SYS_env_set_trapframe:
 		return sys_env_set_trapframe((envid_t)a1, (struct Trapframe *)a2);
 	default:
 		return -E_INVAL;
 	}
 }
-

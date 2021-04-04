@@ -1,10 +1,8 @@
-/* See COPYRIGHT for copyright information. */
-
 /* Support for reading the NVRAM from the real-time clock. */
 
-#include <inc/x86.h>
+#include "inc/x86.h"
 
-#include <kern/kclock.h>
+#include "kern/kclock.h"
 
 
 unsigned

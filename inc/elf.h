@@ -1,5 +1,5 @@
-#ifndef JOS_INC_ELF_H
-#define JOS_INC_ELF_H
+#ifndef ALVOS_INC_ELF_H
+#define ALVOS_INC_ELF_H
 
 #define ELF_MAGIC 0x464C457FU /* "\x7FELF" 的小端模式(低位优先)的十六进制数 */
 
@@ -82,4 +82,4 @@ struct Secthdr
 // Secthdr::sh_name 的值
 #define ELF_SHN_UNDEF 0
 
-#endif /* !ALVOS_INC_ELF_H */
+#endif

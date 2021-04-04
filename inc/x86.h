@@ -1,5 +1,5 @@
-#ifndef JOS_INC_X86_H
-#define JOS_INC_X86_H
+#ifndef ALVOS_INC_X86_H
+#define ALVOS_INC_X86_H
 
 #include <inc/types.h>
 
@@ -293,4 +293,4 @@ read_tsc(void)
         return tsc;
 }
 
-#endif /* !JOS_INC_X86_H */
+#endif
