@@ -1,6 +1,6 @@
 // program to cause a general protection exception
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 void
 umain(int argc, char **argv)

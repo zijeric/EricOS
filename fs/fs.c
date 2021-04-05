@@ -1,12 +1,12 @@
-#include <inc/string.h>
-
+// 规范文件系统的磁盘结构
+#include "inc/string.h"
 #include "fs.h"
 
 // --------------------------------------------------------------
-// Super block
+// 超级块
 // --------------------------------------------------------------
 
-// Validate the file system super-block.
+// 验证文件系统的超级块Validate the file system super-block.
 void
 check_super(void)
 {
@@ -21,16 +21,17 @@ check_super(void)
 
 
 // --------------------------------------------------------------
-// File system structures
+// 文件系统结构
 // --------------------------------------------------------------
 
-// Initialize the file system
+// 初始化文件系统
 void
 fs_init(void)
 {
 	static_assert(sizeof(struct File) == 256);
 
-	// Find a AlvOS disk.  Use the second IDE disk (number 1) if available.
+	// 找到一个 AlvOS 磁盘.
+	// 如果第二个磁盘(number 1)可用，则使用它 Use the second IDE disk (number 1) if available.
 	if (ide_probe_disk1())
 		ide_set_disk(1);
 	else
@@ -38,7 +39,7 @@ fs_init(void)
 
 	bc_init();
 
-	// Set "super" to point to the super block.
+	// 配置 super 指向超级块.
 	super = diskaddr(1);
 	check_super();
 }

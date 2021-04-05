@@ -1,5 +1,5 @@
-#include <inc/lib.h>
-#include <inc/elf.h>
+#include "inc/lib.h"
+#include "inc/elf.h"
 
 #define UTEMP2USTACK(addr)	((void*) (addr) + (USTACKTOP - PGSIZE) - UTEMP)
 #define UTEMP2			(UTEMP + PGSIZE)

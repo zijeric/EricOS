@@ -1,6 +1,6 @@
 // test evil pointer for user-level fault handler
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 void
 umain(int argc, char **argv)

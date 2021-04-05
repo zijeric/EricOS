@@ -5,18 +5,18 @@
 // We don't actually want to define off_t!
 #define off_t xxx_off_t
 #define bool xxx_bool
-#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <inttypes.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include "assert.h"
+#include "errno.h"
+#include "fcntl.h"
+#include "inttypes.h"
+#include "stdarg.h"
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+#include "unistd.h"
+#include "sys/mman.h"
+#include "sys/stat.h"
+#include "sys/types.h"
 #undef off_t
 #undef bool
 
@@ -28,8 +28,8 @@ typedef uint32_t physaddr_t;
 typedef uint32_t off_t;
 typedef int bool;
 
-#include <inc/mmu.h>
-#include <inc/fs.h>
+#include "inc/mmu.h"
+#include "inc/fs.h"
 
 #define ROUNDUP(n, v) ((n) - 1 + (v) - ((n) - 1) % (v))
 #define MAX_DIR_ENTS 128

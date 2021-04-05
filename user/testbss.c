@@ -1,6 +1,6 @@
 // test reads and writes to a large bss
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 #define ARRAYSIZE (1024*1024)
 

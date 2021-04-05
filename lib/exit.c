@@ -1,5 +1,4 @@
-
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 void
 exit(void)

@@ -1,4 +1,4 @@
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 #define BUFSIZ 1024		/* Find the buffer overrun bug! */
 int debug = 0;

@@ -2,16 +2,16 @@
 // Local APIC 管理内部(非I/O)中断
 // See Chapter 8 & Appendix C of Intel processor manual volume 3.
 
-#include <inc/types.h>
-#include <inc/memlayout.h>
-#include <inc/trap.h>
-#include <inc/mmu.h>
-#include <inc/stdio.h>
-#include <inc/x86.h>
-#include <kern/pmap.h>
-#include <kern/cpu.h>
+#include "inc/types.h"
+#include "inc/memlayout.h"
+#include "inc/trap.h"
+#include "inc/mmu.h"
+#include "inc/stdio.h"
+#include "inc/x86.h"
+#include "kern/pmap.h"
+#include "kern/cpu.h"
 
-// Local APIC registers, divided by 4 for use as uint32_t[] indices.
+// Local APIC 寄存器集, divided by 4 for use as uint32_t[] indices.
 #define ID (0x0020 / 4)	   // ID
 #define VER (0x0030 / 4)   // Version
 #define TPR (0x0080 / 4)   // Task Priority
@@ -58,8 +58,8 @@ void lapic_init(void)
 	if (!lapicaddr)
 		return;
 
-	// lapicaddr is the physical address of the LAPIC's 4K MMIO
-	// region.  Map it in to virtual memory so we can access it.
+	// lapicaddr 是 LAPIC 的 4KB MMIO 区域的物理地址
+	// 为了可以访问它，把它映射到虚拟内存中.
 	lapic = mmio_map_region(lapicaddr, 4096);
 
 	// Enable local APIC; set spurious interrupt vector.

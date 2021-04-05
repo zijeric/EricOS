@@ -1,6 +1,6 @@
 // test user-level fault handler -- alloc pages to fix faults
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 void
 handler(struct UTrapframe *utf)

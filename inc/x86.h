@@ -1,7 +1,7 @@
 #ifndef ALVOS_INC_X86_H
 #define ALVOS_INC_X86_H
 
-#include <inc/types.h>
+#include "inc/types.h"
 
 static inline uint32_t xchg(volatile uint32_t *addr,uint32_t newval);
 static __inline void breakpoint(void) __attribute__((always_inline));

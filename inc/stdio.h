@@ -1,7 +1,7 @@
 #ifndef ALVOS_INC_STDIO_H
 #define ALVOS_INC_STDIO_H
 
-#include <inc/stdarg.h>
+#include "inc/stdarg.h"
 
 #ifndef NULL
 #define NULL ((void *)0)

@@ -1,6 +1,6 @@
 // test register restore on user-level page fault return
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 struct regs
 {

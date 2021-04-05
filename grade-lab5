@@ -2,7 +2,7 @@
 
 from gradelib import *
 
-r = Runner(save("jos.out"),
+r = Runner(save("alvos.out"),
            stop_breakpoint("cons_getc"))
 
 def matchtest(parent, name, *args, **kw):

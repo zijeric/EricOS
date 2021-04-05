@@ -8,7 +8,7 @@
 // The remaining two environments are the integer generator at the bottom
 // of main and user/idle.
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 unsigned
 primeproc(void)

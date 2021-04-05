@@ -408,6 +408,8 @@ void env_create(uint8_t *binary, enum EnvType type)
 	// 4.将用户环境运行所需要的代码加载到用户环境的地址空间(参数binary)
 	load_icode(e, binary);
 
+	// x86处理器使用了EFLAGS的IOPL位来决定是否允许保护模式代码使用device I/O指令
+	// 根据 ENV_TYPE_FS 向文件系统进程给出相关的I/O权限
 	if (type == ENV_TYPE_FS)
 	{
 		e->env_tf.tf_eflags |= FL_IOPL_MASK;

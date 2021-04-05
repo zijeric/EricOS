@@ -1,5 +1,5 @@
-#include <inc/x86.h>
-#include <inc/lib.h>
+#include "inc/x86.h"
+#include "inc/lib.h"
 
 char buf[512], buf2[512];
 

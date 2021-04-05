@@ -1,5 +1,5 @@
-#include <inc/args.h>
-#include <inc/string.h>
+#include "inc/args.h"
+#include "inc/string.h"
 
 void
 argstart(int *argc, char **argv, struct Argstate *args)

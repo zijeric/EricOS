@@ -3,8 +3,8 @@
  * serves IPC requests from other environments.
  */
 
-#include <inc/x86.h>
-#include <inc/string.h>
+#include "inc/x86.h"
+#include "inc/string.h"
 
 #include "fs.h"
 

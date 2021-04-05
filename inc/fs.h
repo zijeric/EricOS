@@ -1,8 +1,8 @@
 #ifndef ALVOS_INC_FS_H
 #define ALVOS_INC_FS_H
 
-#include <inc/types.h>
-#include <inc/mmu.h>
+#include "inc/types.h"
+#include "inc/mmu.h"
 
 // File nodes (both in-memory and on-disk)
 
@@ -47,14 +47,14 @@ struct File {
 #define FTYPE_DIR	1	// Directory
 
 
-// File system super-block (both in-memory and on-disk)
+// 文件系统的超级块 (both in-memory and on-disk)
 
-#define FS_MAGIC	0x4A0530AE	// related vaguely to 'ALV\0S!'
+#define FS_MAGIC	0x416C7661	// str: 'Alv\0S!'
 
 struct Super {
-	uint32_t s_magic;		// Magic number: FS_MAGIC
-	uint32_t s_nblocks;		// Total number of blocks on disk
-	struct File s_root;		// Root directory node
+	uint32_t s_magic;		// 魔数: FS_MAGIC
+	uint32_t s_nblocks;		// 在磁盘中块的数量
+	struct File s_root;		// 根目录 node
 };
 
 // Definitions for requests from clients to file system

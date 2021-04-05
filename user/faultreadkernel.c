@@ -1,6 +1,6 @@
 // buggy program - faults with a read from kernel space
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 void
 umain(int argc, char **argv)

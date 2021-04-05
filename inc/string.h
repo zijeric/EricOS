@@ -1,7 +1,7 @@
 #ifndef ALVOS_INC_STRING_H
 #define ALVOS_INC_STRING_H
 
-#include <inc/types.h>
+#include "inc/types.h"
 
 int strlen(const char *s);
 int strnlen(const char *s, size_t size);

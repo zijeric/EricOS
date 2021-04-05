@@ -1,14 +1,13 @@
-#include <inc/fs.h>
-#include <inc/lib.h>
+#include "inc/fs.h"
+#include "inc/lib.h"
 
 #define SECTSIZE	512			// bytes per disk sector
 #define BLKSECTS	(BLKSIZE / SECTSIZE)	// sectors per block
 
-/* Disk block n, when in memory, is mapped into the file system
- * server's address space at DISKMAP + (n*BLKSIZE). */
+/* 磁盘块 n，当在内存时，被映射进文件系统服务器的地址空间 DISKMAP + (n*BLKSIZE). */
 #define DISKMAP		0x10000000
 
-/* Maximum disk size we can handle (3GB) */
+/* AlvOS 可处理的最大磁盘大小 (3GB) */
 #define DISKSIZE	0xC0000000
 
 struct Super *super;		// superblock

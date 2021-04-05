@@ -1,7 +1,7 @@
 // Ping-pong a counter between two shared-memory processes.
 // Only need to start one of these -- splits into two with sfork.
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 uint32_t val;
 

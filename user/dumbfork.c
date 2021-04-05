@@ -1,8 +1,8 @@
 // Ping-pong a counter between two processes.
 // Only need to start one of these -- splits into two, crudely.
 
-#include <inc/string.h>
-#include <inc/lib.h>
+#include "inc/string.h"
+#include "inc/lib.h"
 
 envid_t dumbfork(void);
 

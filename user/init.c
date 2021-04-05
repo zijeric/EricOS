@@ -1,4 +1,4 @@
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 struct {
 	char msg1[5000];

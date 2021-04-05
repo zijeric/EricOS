@@ -1,7 +1,7 @@
 // Test Conversation between parent and child environment
 // Contributed by Varun Agrawal at Stony Brook
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 const char *str1 = "hello child environment! how are you?";
 const char *str2 = "hello parent environment! I'm good.";

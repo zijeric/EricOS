@@ -3,7 +3,7 @@
 // so eventually the kernel kills it (PFM_KILL) because
 // we outrun the stack with invocations of the user-level handler
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 void
 umain(int argc, char **argv)

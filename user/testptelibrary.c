@@ -1,4 +1,4 @@
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 #define VA ((char *) 0xA0000000)
 const char *msg = "hello, world\n";

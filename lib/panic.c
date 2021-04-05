@@ -1,5 +1,5 @@
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 /*
  * Panic is called on unresolvable fatal errors.

@@ -1,6 +1,6 @@
-#include <inc/fs.h>
-#include <inc/string.h>
-#include <inc/lib.h>
+#include "inc/fs.h"
+#include "inc/string.h"
+#include "inc/lib.h"
 
 #define debug 0
 

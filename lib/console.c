@@ -1,6 +1,6 @@
 
-#include <inc/string.h>
-#include <inc/lib.h>
+#include "inc/string.h"
+#include "inc/lib.h"
 
 void
 cputchar(int ch)

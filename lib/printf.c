@@ -5,10 +5,10 @@
 // It is very important that it always go to the console, especially when
 // debugging file descriptor code!
 
-#include <inc/types.h>
-#include <inc/stdio.h>
-#include <inc/stdarg.h>
-#include <inc/lib.h>
+#include "inc/types.h"
+#include "inc/stdio.h"
+#include "inc/stdarg.h"
+#include "inc/lib.h"
 
 
 // Collect up to 256 characters into a buffer

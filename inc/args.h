@@ -37,7 +37,7 @@ char *argvalue(struct Argstate *);
 
 // Example:
 //
-//	#include <inc/lib.h>
+//	#include "inc/lib.h"
 //
 //	void
 //	umain(int argc, char **argv)

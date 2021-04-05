@@ -1,6 +1,6 @@
 // buggy program - causes a divide by zero exception
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 int zero;
 

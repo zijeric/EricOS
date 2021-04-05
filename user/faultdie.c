@@ -1,6 +1,6 @@
 // test user-level fault handler -- just exit when we fault
 
-#include <inc/lib.h>
+#include "inc/lib.h"
 
 void
 handler(struct UTrapframe *utf)

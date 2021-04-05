@@ -12,3 +12,5 @@
 /init.*
 /__pycache__
 stabs.txt
+grade-lab5
+/gradelib.py
