@@ -1,5 +1,5 @@
 /*
- * 以下代码参考 libdwarf 的实现
+ * 以下代码参考 libdwarf 的实现，声明 dwarf_lineno.c 的方法
  */
 #ifndef DWARF_LINENO_H
 // External functions used

@@ -47,4 +47,4 @@ struct Stab {
 	uint32_t n_value;	// value of symbol
 };
 
-#endif /* !ALVOS_STAB_H */
+#endif

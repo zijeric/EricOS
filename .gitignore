@@ -1,5 +1,5 @@
 /obj
-/.gdbinit
+/.gdbinit*
 /wget.log
 /qemu.pcap
 /qemu.pcap.*
@@ -11,6 +11,5 @@
 /.vscode
 /init.*
 /__pycache__
-stabs.txt
-/vivek.map
-/mergedep.pl
+gradelib.*
+grade-lab*

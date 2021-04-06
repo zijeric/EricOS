@@ -1,5 +1,5 @@
 /*
- * 以下代码参考 libdwarf 的实现
+ * 以下代码参考 libdwarf 的实现，
  */
 #ifndef DWARF_API_H
 #define DWARF_API_H

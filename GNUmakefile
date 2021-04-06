@@ -1,32 +1,25 @@
 #
-# This makefile system follows the structuring conventions
-# recommended by Peter Miller in his excellent paper:
+# AlvOS GNUmakefile 遵循 Peter Miller 在其优秀论文中推荐的结构化约定:
 #
-#	Recursive Make Considered Harmful
+#	title: Recursive Make Considered Harmful
 #	http://aegis.sourceforge.net/auug97.pdf
 #
 OBJDIR := obj
 
 # Run 'make V=1' to turn on verbose commands, or 'make V=0' to turn them off.
-# ifeq ($(V),1)
-# override V =
-# endif
-# ifeq ($(V),0)
-# override V = @
-# endif
 V = @
 
 LABSETUP ?= ./
 
 TOP = .
 
-
 ifndef QEMU
 QEMU := $(shell if which qemu-system-x86_64 > /dev/null; \
 	then echo qemu-system-x86_64; exit; \
+	else \
+	qemu=/Applications/Q.app/Contents/MacOS/i386-softmmu.app/Contents/MacOS/i386-softmmu; \
 	if test -x $$qemu; then echo $$qemu; exit; fi; fi;)
 endif
-
 # 尝试生成一个唯一的 GDB 端口
 GDBPORT	:= $(shell expr `id -u` % 5000 + 25000)
 
@@ -49,16 +42,15 @@ PERL	:= perl
 # 为了阻止内联而只优化为 -O1，这会使回溯复杂化
 CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O0 -fno-builtin -I$(TOP) -MD
 CFLAGS += -fno-omit-frame-pointer -mno-red-zone
-CFLAGS += -Wall -Wno-format -Wno-unused -Werror -gdwarf-2 -fno-PIC -fno-stack-protector
+CFLAGS += -Wall -Wno-format -Wno-unused -gdwarf-2 -fno-PIC -fno-stack-protector # -Werror 
 
-# 如果该选项存在，则添加-fno-stack-protector.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
 # 通用的链接器标志
 LDFLAGS := -m elf_x86_64 -z max-page-size=0x1000 --print-gc-sections
 BOOT_LDFLAGS := -m elf_i386
 
-# AlvOS用户程序的链接器标志
+# AlvOS 用户程序的链接器标志
 ULDFLAGS := -T user/user.ld
 
 GCC_LIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
@@ -84,11 +76,10 @@ KERN_CFLAGS := $(CFLAGS) -DALVOS_KERNEL -DDWARF_SUPPORT -gdwarf-2 -mcmodel=large
 BOOT_CFLAGS := $(CFLAGS) -DALVOS_KERNEL -gdwarf-2 -m32
 USER_CFLAGS := $(CFLAGS) -DALVOS_USER -gdwarf-2 -mcmodel=large -m64
 
-# Update .vars.X if variable X has changed since the last make run.
+# 如果变量 X 自上次 make 运行以来发生了更改，则更新.vars.X.
 #
-# Rules that use variable X should depend on $(OBJDIR)/.vars.X.  If
-# the variable's value has changed, this will update the vars file and
-# force a rebuild of the rule that depends on it.
+# 变量 X 的规则应该依赖于 $(OBJDIR)/.vars.X
+# 如果变量的值发生了变化，就更新vars文件，并强制重新构建(Make)依赖于它的规则.
 $(OBJDIR)/.vars.%: FORCE
 	$(V)echo "$($*)" | cmp -s $@ || echo "$($*)" > $@
 .PRECIOUS: $(OBJDIR)/.vars.%
@@ -98,11 +89,21 @@ $(OBJDIR)/.vars.%: FORCE
 # 包含子目录的 Makefrags
 include boot/Makefrag
 include kern/Makefrag
+include lib/Makefrag
+include user/Makefrag
+include fs/Makefrag
 
 
+CPUS ?= 1
+
+# 配置内核内存大小，限制为256MB
 QEMUOPTS = -m 256 -hda $(OBJDIR)/kern/kernel.img -serial mon:stdio -gdb tcp::$(GDBPORT)
 QEMUOPTS += $(shell if $(QEMU) -nographic -help | grep -q '^-D '; then echo '-D qemu.log'; fi)
+# 配置内核映像的路径，并挂载
 IMAGES = $(OBJDIR)/kern/kernel.img
+QEMUOPTS += -smp $(CPUS)
+QEMUOPTS += -hdb $(OBJDIR)/fs/fs.img
+IMAGES += $(OBJDIR)/fs/fs.img
 QEMUOPTS += $(QEMUEXTRA)
 
 
@@ -155,9 +156,59 @@ ifneq ($(V),@)
 GRADEFLAGS += -v
 endif
 
+grade:
+	@echo $(MAKE) clean
+	@$(MAKE) clean || \
+	  (echo "'make clean' failed.  HINT: Do you have another running instance of AlvOS?" && exit 1)
+	./grade-lab$(LAB) $(GRADEFLAGS)
 
+handin: realclean
+	@if [ `git status --porcelain| wc -l` != 0 ] ; then echo "\n\n\n\n\t\tWARNING: YOU HAVE UNCOMMITTED CHANGES\n\n    Consider committing any pending changes and rerunning make handin.\n\n\n\n"; fi
+	git tag -f -a lab$(LAB)-handin -m "Lab$(LAB) Handin"
+	git push --tags handin
 
-# 参考 MIT JOS 源码，这种神奇的方法会自动为所编译的C源文件中包含的头文件生成makefile依赖项，并在每次重新编译时使这些依赖项保持最新
+handin-check:
+	@if test "$$(git symbolic-ref HEAD)" != refs/heads/lab$(LAB); then \
+		git branch; \
+		read -p "You are not on the lab$(LAB) branch.  Hand-in the current branch? [y/N] " r; \
+		test "$$r" = y; \
+	fi
+	@if ! git diff-files --quiet || ! git diff-index --quiet --cached HEAD; then \
+		git status; \
+		echo; \
+		echo "You have uncomitted changes.  Please commit or stash them."; \
+		false; \
+	fi
+	@if test -n "`git ls-files -o --exclude-standard`"; then \
+		git status; \
+		read -p "Untracked files will not be handed in.  Continue? [y/N] " r; \
+		test "$$r" = y; \
+	fi
+
+tarball: handin-check
+	git archive --format=tar HEAD | gzip > lab$(LAB)-handin.tar.gz
+
+handin-prep:
+	@./handin-prep
+
+# For test runs
+
+prep-%:
+	$(V)$(MAKE) "INIT_CFLAGS=${INIT_CFLAGS} -DTEST=`case $* in *_*) echo $*;; *) echo user_$*;; esac`" $(IMAGES)
+
+run-%-nox-gdb: prep-% pre-qemu
+	$(QEMU) -nographic $(QEMUOPTS) -S
+
+run-%-gdb: prep-% pre-qemu
+	$(QEMU) $(QEMUOPTS) -S
+
+run-%-nox: prep-% pre-qemu
+	$(QEMU) -nographic $(QEMUOPTS)
+
+run-%: prep-% pre-qemu
+	$(QEMU) $(QEMUOPTS)
+
+# 参考 MIT OS 源码，这种神奇的方法会自动为所编译的C源文件中包含的头文件生成makefile依赖项，并在每次重新编译时使这些依赖项保持最新
 $(OBJDIR)/.deps: $(foreach dir, $(OBJDIRS), $(wildcard $(OBJDIR)/$(dir)/*.d))
 	@mkdir -p $(@D)
 	@$(PERL) mergedep.pl $@ $^
@@ -168,4 +219,4 @@ always:
 	@:
 
 .PHONY: all always \
-	tarball clean realclean distclean
+	tarball clean realclean distclean grade handin-prep handin-check

@@ -279,8 +279,6 @@ cpuid(uint32_t info, uint32_t *eaxp, uint32_t *ebxp, uint32_t *ecxp, uint32_t *e
 static inline uint32_t
 xchg(volatile uint32_t *addr,uint32_t newval){
 	uint32_t result;
-
-	// "+m"中的 + 表示一个读-修改-写操作数.
 	__asm __volatile("lock; xchgl %0, %1":
 	"+m" (*addr), "=a" (result):
 	"1"(newval):
@@ -295,4 +293,4 @@ read_tsc(void)
         return tsc;
 }
 
-#endif /* !ALVOS_INC_X86_H */
+#endif
