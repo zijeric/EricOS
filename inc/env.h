@@ -144,6 +144,9 @@ struct Env
 
 	// 环境对应的 ELF 文件
 	uint8_t *elf;
+
+	// 环境运行路径
+	// char workpath[MAXPATH];
 };
 
 #endif

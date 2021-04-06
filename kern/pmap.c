@@ -426,7 +426,7 @@ void x64_vm_init(void)
 	// 权限: 内核 RW, 用户 -
 
 	// pml4_virt: boot[0, 128MB], kernel[KERNBASE, KB+128MB]
-	// 将 cr3 寄存器存储的 pml4virt 临时4级页表切换到我们新创建的完整 boot_cr3 4级页表
+	// 将 cr3 寄存器存储的 pml4virt 临时4级页表切换到新创建的完整 boot_cr3 4级页表
 	// eip 指令指针现在位于[KERNBASE, KERNBASE+4MB]内（在执行内核代码），为了4级页表切换时 CPU 执行内核不产生冲突
 	// boot_cr3 在KERNBASE以上区间的映射包含了 pml4virt，且管理了pages, envs, kern_stack
 	// MMU 分页硬件在进行页式地址转换时会自动地从 CR3 中取得4级页表地址

@@ -193,7 +193,7 @@ mpconfig(struct mp **pmp)
  * 细节：
  * 通过调用 mpconfig() 从BIOS中读取浮动指针mp，从mp中找到struct mpconf多处理器配置表，
  * 然后根据这个结构体内的entries信息(processor table entry)对各个cpu结构体进行配置(主要是cpu_id)
- * 如果proc->flag是MPPROC_BOOT，说明这个入口对应的处理器是用于启动的处理器，我们把结构体数组cpus[ncpu]地址赋值给bootcpu指针
+ * 如果proc->flag是MPPROC_BOOT，说明这个入口对应的处理器是用于启动的处理器，把结构体数组cpus[ncpu]地址赋值给bootcpu指针
  * 注意这里ncpu是个全局变量，那么这里实质上就是把cpus数组的第一个元素的地址给了bootcpu
  * 如果出现任何entries匹配错误，则认为处理器的初始化失败了，不能用多核处理器进行机器的运行
  */
@@ -220,7 +220,7 @@ void mp_init(void)
 		{
 		case MPPROC:
 			proc = (struct mpproc *)p;
-			// 如果proc->flag是MPPROC_BOOT，说明这个入口对应的处理器是用于启动的处理器，我们把结构体数组cpus[ncpu]地址赋值给bootcpu指针
+			// 如果proc->flag是MPPROC_BOOT，说明这个入口对应的处理器是用于启动的处理器，把结构体数组cpus[ncpu]地址赋值给bootcpu指针
 			// 注意这里ncpu是个全局变量，那么这里实质上就是把cpus数组的第一个元素的地址给了bootcpu
 			if (proc->flags & MPPROC_BOOT)
 				bootcpu = &cpus[ncpu];

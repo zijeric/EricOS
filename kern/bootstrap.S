@@ -10,7 +10,7 @@
 # 因此 boot 页表需要映射高低两段虚拟地址到内核的物理地址
 
 # 参考: AMD64_Architecture_Programmers_Manual Volume 2 System Programming
-# 为了开启 IA-32e 分页模式，我们需要做如下事情：
+# 为了开启 IA-32e 分页模式，需要做如下事情：
 # 1.设置 CR0.PG 位；(boot/boot.S 已设置)
 # 2.设置 CR4.PAE 位；
 # 3.设置 IA32_EFER.LME 位
@@ -20,7 +20,7 @@
 # - 2个 pdpt (页目录指针)，包含4个项
 # - 2个 pde (页目录表)，一共包含2048个项
 # bootstrap.S 设置的页表映射: cr3 -> pml4 -> pdpe -> pgdir
-# 为了跳过 pgdir->pt，我们在 pgdir 中设置 PTE_MBZ 位
+# 为了跳过 pgdir->pt，在 pgdir 中设置 PTE_MBZ 位
 .code32
 .set pml4, pml4virt         # pml4: 0x102000
 .set pdpt1, pml4 + 0x1000   # pml4, pdpt, pde 大小: 4096-bit(PGSIZE)

@@ -91,8 +91,8 @@ void readseg(uint32_t pa, uint32_t count, uint32_t offset)
 	// offset 从字节转换为硬盘的第i扇区，内核从扇区3开始，
 	offset = (offset / SECTSIZE) + 1;
 
-	// 如果速度太慢，我们可以一次读取许多扇区.
-	// 我们会在内存中写入比要求的更多的内容，但是没关系 —— 我们以递增的顺序加载.
+	// 如果速度太慢，可以一次读取许多扇区.
+	// 会在内存中写入比要求的更多的内容，但是没关系 —— 以递增的顺序加载.
 	while (pa < end_pa)
 	{
 		// 循环等待磁盘就绪
@@ -121,7 +121,7 @@ void readseg(uint32_t pa, uint32_t count, uint32_t offset)
 void
 waitdisk(void)
 {
-	// wait for disk reaady
+	// wait for disk ready
 	while ((inb(0x1F7) & 0xC0) != 0x40)
 		;
 }

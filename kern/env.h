@@ -23,7 +23,7 @@ int envid2env(envid_t envid, struct Env **env_store, bool checkperm);
 void env_run(struct Env *e) __attribute__((noreturn));
 void env_pop_tf(struct Trapframe *tf) __attribute__((noreturn));
 
-// 没有这个宏，由于 C 预处理器的参数预扫描规则，我们无法将 TEST 之类的宏传递给 env_create.
+// 没有这个宏，由于 C 预处理器的参数预扫描规则，无法将 TEST 之类的宏传递给 env_create.
 #define ENV_PASTE3(x, y, z) x##y##z
 
 #define ENV_CREATE(x, type)                                   \

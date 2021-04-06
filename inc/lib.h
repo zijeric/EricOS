@@ -1,5 +1,5 @@
 // 用户态支持库的主要公共头文件，其代码位于lib目录中.
-// 为了链接到所有用户态应用程序(而不是内核或bootloader)，需要定义 lib.h 为我们内核的标准C库.
+// 为了链接到所有用户态应用程序(而不是内核或bootloader)，需要定义 lib.h 为内核的标准C库.
 
 #ifndef ALVOS_INC_LIB_H
 #define ALVOS_INC_LIB_H 1
@@ -30,15 +30,19 @@ extern const volatile struct Env envs[NENV];
 extern const volatile struct PageInfo pages[];
 
 // exit.c
+
 void exit(void);
 
 // pgfault.c
+
 void set_pgfault_handler(void (*handler)(struct UTrapframe *utf));
 
 // readline.c
+
 char *readline(const char *buf);
 
 // syscall.c
+
 void sys_cputs(const char *string, size_t len);
 int sys_cgetc(void);
 envid_t sys_getenvid(void);
@@ -73,10 +77,12 @@ int32_t ipc_recv(envid_t *from_env_store, void *pg, int *perm_store);
 envid_t ipc_find_env(enum EnvType type);
 
 // fork.c
+
 #define PTE_SHARE 0x400
 envid_t fork(void);
 
 // fd.c
+
 int close(int fd);
 ssize_t read(int fd, void *buf, size_t nbytes);
 ssize_t write(int fd, const void *buf, size_t nbytes);
@@ -88,29 +94,35 @@ int fstat(int fd, struct Stat *statbuf);
 int stat(const char *path, struct Stat *statbuf);
 
 // file.c
+
 int open(const char *path, int mode);
 int ftruncate(int fd, off_t size);
 int remove(const char *path);
 int sync(void);
 
 // pageref.c
+
 int pageref(void *addr);
 
 // spawn.c
+
 envid_t spawn(const char *program, const char **argv);
 envid_t spawnl(const char *program, const char *arg0, ...);
 
 // console.c
+
 void cputchar(int c);
 int getchar(void);
 int iscons(int fd);
 int opencons(void);
 
 // pipe.c
+
 int pipe(int pipefds[2]);
 int pipeisclosed(int pipefd);
 
 // wait.c
+
 void wait(envid_t env);
 
 /* File open modes */

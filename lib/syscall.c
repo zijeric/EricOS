@@ -24,14 +24,14 @@ syscall(int num, int check, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 	 * - 清除%rflags的一些位，设置%cs和%rip为描述符中的值(用户态和内核态隔离)，进入内核态
 	 * 
 	 * 发生中断后，去IDT中查找中断处理函数，最终会走到kern/trap.c的trap_dispatch()中
-	 * 根据中断号0x30，又会调用kern/syscall.c中的syscall()函数（注意这时候我们已经进入了内核态CPL=0）
+	 * 根据中断号0x30，又会调用kern/syscall.c中的syscall()函数（注意这时候已经进入了内核态CPL=0）
 	 * 在该函数中根据系统调用号调用对应的系统调用处理函数
 	 * 
 	 * C语言内联汇编
 	 * asm volatile ("asm code" : output : input : changed);
 	 * 通用系统调用: 在eax中传递系统调用序号，在rdx, rcx, rbx, rdi, rsi中最多传递五个参数
 	 * 用T_SYSCALL中断内核
-	 * volatile 告诉汇编程序不要因为我们不使用返回值就优化该指令
+	 * volatile 告诉汇编程序不要因为不使用返回值就优化该指令
 	 * 最后一个子句告诉汇编程序，指令可能会改变条件代码cx和任意内存memory位置
 	 * 由汇编编译器做好数据保存和恢复工作(栈)
 	 */

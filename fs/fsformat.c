@@ -1,5 +1,6 @@
 /*
  * AlvOS file system format
+ * AlvOS 创建磁盘的工具
  */
 
 // We don't actually want to define off_t!
@@ -31,7 +32,7 @@ typedef int bool;
 #include "inc/mmu.h"
 #include "inc/fs.h"
 
-#define ROUNDUP(n, v) ((n) - 1 + (v) - ((n) - 1) % (v))
+#define ROUNDUP(n, v) ((n)-1 + (v) - ((n)-1) % (v))
 #define MAX_DIR_ENTS 128
 
 #define FLAG_BIN 1
@@ -51,23 +52,22 @@ char *diskmap, *diskpos;
 struct Super *super;
 uint32_t *bitmap;
 
-void
-panic(const char *fmt, ...)
+void panic(const char *fmt, ...)
 {
-        va_list ap;
+	va_list ap;
 
-        va_start(ap, fmt);
-        vfprintf(stderr, fmt, ap);
-        va_end(ap);
-        fputc('\n', stderr);
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	fputc('\n', stderr);
 	abort();
 }
 
-void
-readn(int f, void *out, size_t n)
+void readn(int f, void *out, size_t n)
 {
 	size_t p = 0;
-	while (p < n) {
+	while (p < n)
+	{
 		size_t m = read(f, out + p, n - p);
 		if (m < 0)
 			panic("read: %s", strerror(errno));
@@ -80,7 +80,7 @@ readn(int f, void *out, size_t n)
 uint32_t
 blockof(void *pos)
 {
-	return ((char*)pos - diskmap) / BLKSIZE;
+	return ((char *)pos - diskmap) / BLKSIZE;
 }
 
 void *
@@ -93,20 +93,21 @@ alloc(uint32_t bytes)
 	return start;
 }
 
-void
-opendisk(const char *name)
+/**
+ * 创建了映像文件，并为超级块和块位图分配好空间(在文件中留出相应大小的空间)
+ */
+void opendisk(const char *name)
 {
 	int r, diskfd, nbitblocks;
 
 	if ((diskfd = open(name, O_RDWR | O_CREAT, 0666)) < 0)
 		panic("open %s: %s", name, strerror(errno));
 
-	if ((r = ftruncate(diskfd, 0)) < 0
-	    || (r = ftruncate(diskfd, nblocks * BLKSIZE)) < 0)
+	if ((r = ftruncate(diskfd, 0)) < 0 || (r = ftruncate(diskfd, nblocks * BLKSIZE)) < 0)
 		panic("truncate %s: %s", name, strerror(errno));
 
-	if ((diskmap = mmap(NULL, nblocks * BLKSIZE, PROT_READ|PROT_WRITE,
-			    MAP_SHARED, diskfd, 0)) == MAP_FAILED)
+	if ((diskmap = mmap(NULL, nblocks * BLKSIZE, PROT_READ | PROT_WRITE,
+						MAP_SHARED, diskfd, 0)) == MAP_FAILED)
 		panic("mmap %s: %s", name, strerror(errno));
 
 	close(diskfd);
@@ -124,27 +125,26 @@ opendisk(const char *name)
 	memset(bitmap, 0xFF, nbitblocks * BLKSIZE);
 }
 
-void
-finishdisk(void)
+void finishdisk(void)
 {
 	int r, i;
 
 	for (i = 0; i < blockof(diskpos); ++i)
-		bitmap[i/32] &= ~(1<<(i%32));
+		bitmap[i / 32] &= ~(1 << (i % 32));
 
 	if ((r = msync(diskmap, nblocks * BLKSIZE, MS_SYNC)) < 0)
 		panic("msync: %s", strerror(errno));
 }
 
-void
-finishfile(struct File *f, uint32_t start, uint32_t len)
+void finishfile(struct File *f, uint32_t start, uint32_t len)
 {
 	int i;
 	f->f_size = len;
 	len = ROUNDUP(len, BLKSIZE);
 	for (i = 0; i < len / BLKSIZE && i < NDIRECT; ++i)
 		f->f_direct[i] = start + i;
-	if (i == NDIRECT) {
+	if (i == NDIRECT)
+	{
 		uint32_t *ind = alloc(BLKSIZE);
 		f->f_indirect = blockof(ind);
 		for (; i < len / BLKSIZE; ++i)
@@ -152,8 +152,7 @@ finishfile(struct File *f, uint32_t start, uint32_t len)
 	}
 }
 
-void
-startdir(struct File *f, struct Dir *dout)
+void startdir(struct File *f, struct Dir *dout)
 {
 	dout->f = f;
 	dout->ents = malloc(MAX_DIR_ENTS * sizeof *dout->ents);
@@ -171,8 +170,7 @@ diradd(struct Dir *d, uint32_t type, const char *name)
 	return out;
 }
 
-void
-finishdir(struct Dir *d)
+void finishdir(struct Dir *d)
 {
 	int size = d->n * sizeof(struct File);
 	struct File *start = alloc(size);
@@ -182,8 +180,7 @@ finishdir(struct Dir *d)
 	d->ents = NULL;
 }
 
-void
-writefile(struct Dir *dir, const char *name)
+void writefile(struct Dir *dir, const char *name)
 {
 	int r, fd;
 	struct File *f;
@@ -213,20 +210,25 @@ writefile(struct Dir *dir, const char *name)
 	close(fd);
 }
 
-void
-usage(void)
+void usage(void)
 {
 	fprintf(stderr, "Usage: fsformat fs.img NBLOCKS files...\n");
 	exit(2);
 }
 
-int
-main(int argc, char **argv)
+/**
+ * 1.使用 opendisk() 创建一个磁盘文件，超级块在这里被初始化
+ * 2.使用 startdir() 创建根目录，并初始化超级块
+ * 3.使用 writefile() 将目标文件写入磁盘映像
+ * 4.使用 finishdir() 将根目录写入磁盘映像
+ * 5.使用 finishdisk() 将块位图设置为正确的值，完成磁盘映像的创建
+ */
+int main(int argc, char **argv)
 {
 	int i;
 	char *s;
 	struct Dir root;
-	int flag=FLAG_ROOT;
+	int flag = FLAG_ROOT;
 	struct Dir bin, sbin;
 	struct File *b, *sb;
 
@@ -239,43 +241,53 @@ main(int argc, char **argv)
 	if (*s || s == argv[2] || nblocks < 2 || nblocks > 10240)
 		usage();
 
+	// 创建磁盘文件，初始化超级块
 	opendisk(argv[1]);
 
 	startdir(&super->s_root, &root);
 
-    b = diradd(&root, FTYPE_DIR, "bin");
-    startdir(b, &bin);
-    
-    sb = diradd(&root, FTYPE_DIR, "sbin");
-    startdir(sb, &sbin);
+	b = diradd(&root, FTYPE_DIR, "bin");
+	// 创建根目录，并初始化超级块
+	startdir(b, &bin);
 
-	for (i = 3; i < argc; i++) {
-       if(strcmp("-b", argv[i]) == 0) {
-           flag = FLAG_BIN;
-            continue;
-        } else if(strcmp("-sb", argv[i]) == 0) {
-            flag = FLAG_SBIN;
-            continue;
-        }
+	sb = diradd(&root, FTYPE_DIR, "sbin");
+	// 创建根目录，并初始化超级块
+	startdir(sb, &sbin);
 
-        switch (flag){
-            case FLAG_ROOT:
-                writefile(&root, argv[i]);
-                break;
-            case FLAG_BIN:
-                writefile(&bin, argv[i]);
-                break;
-            case FLAG_SBIN:
-                writefile(&sbin, argv[i]);
-                break;
+	for (i = 3; i < argc; i++)
+	{
+		if (strcmp("-b", argv[i]) == 0)
+		{
+			flag = FLAG_BIN;
+			continue;
 		}
-    }
-	
-    finishdir(&bin);
-    finishdir(&sbin);
-    finishdir(&root);
+		else if (strcmp("-sb", argv[i]) == 0)
+		{
+			flag = FLAG_SBIN;
+			continue;
+		}
 
+		// 将目标文件写入磁盘映像
+		switch (flag)
+		{
+		case FLAG_ROOT:
+			writefile(&root, argv[i]);
+			break;
+		case FLAG_BIN:
+			writefile(&bin, argv[i]);
+			break;
+		case FLAG_SBIN:
+			writefile(&sbin, argv[i]);
+			break;
+		}
+	}
+
+	// 将所有目录写入磁盘映像
+	finishdir(&bin);
+	finishdir(&sbin);
+	finishdir(&root);
+
+	// 将块位图设置为正确的值，完成磁盘映像的创建
 	finishdisk();
 	return 0;
 }
-

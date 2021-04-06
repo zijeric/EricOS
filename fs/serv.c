@@ -1,6 +1,6 @@
 /*
- * File system server main loop -
- * serves IPC requests from other environments.
+ * 为了简化，系统采用轮询方式(而不是磁盘中断)：查询EFLAGS寄存器中的IOPL位
+ * 文件系统服务器主循环 — 提供来自其他环境的IPC请求.
  */
 
 #include "inc/x86.h"

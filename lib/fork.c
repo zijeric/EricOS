@@ -54,7 +54,7 @@ pgfault(struct UTrapframe *utf)
 /**
  * 进行COW式的页复制.
  * 将父环境的页表空间映射到子环境，即共享数据，并都标记为COW，为了以后任意环境写数据时产生页错误，为其分配新的物理页
- * 映射: 将我们的虚拟页pn(地址: pn*PGSIZE)映射到相同虚拟地址的 envid 中.
+ * 映射: 将的虚拟页pn(地址: pn*PGSIZE)映射到相同虚拟地址的 envid 中.
  * 成功: 返回0，失败调用 panic()
  */
 static int
@@ -190,7 +190,7 @@ fork(void)
 
 	extern void _pgfault_upcall(void);
 	// 为子环境设置页错误处理函数.
-	// 因为使用env_alloc()创建的env的处理函数指针都为空，但是这时我们已经明确的为其错误栈分配了物理页面
+	// 因为使用env_alloc()创建的env的处理函数指针都为空，但是这时已经明确的为其错误栈分配了物理页面
 	// 所以可以直接使用系统调用指定错误处理的入口，_pgfault_upcall()为所有用户页错误处理函数的总入口
 	r = sys_env_set_pgfault_upcall(childid, _pgfault_upcall);
 	if (r < 0)

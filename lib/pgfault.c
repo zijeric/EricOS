@@ -13,7 +13,7 @@ void (*_pgfault_handler)(struct UTrapframe *utf);
 /**
  * 设置用户级页错误处理函数.
  * 包含用户异常栈的初始化和页错误处理函数的设置，利用 kern/syscall.c sys_env_set_pgfault_upcall() 注册(utf字段)用户页错误处理函数
- * 第一次注册处理程序时，我们需要分配一个异常堆栈(顶部位于UXSTACKTOP的一页内存)
+ * 第一次注册处理程序时，需要分配一个异常堆栈(顶部位于UXSTACKTOP的一页内存)
  * 并告诉内核在页错误发生时调用汇编语言 _pgfault_upcall 例程
  */
 void set_pgfault_handler(void (*handler)(struct UTrapframe *utf))

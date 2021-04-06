@@ -33,7 +33,7 @@ static struct Env *env_free_list;
  * 
  * 除了描述符权限级别(DPL, Descriptor Privilege Level)之外，内核段和用户段都是相同的
  * 但是要加载SS栈段寄存器，当前环境权限级别(CPL, Current Privilege Level)必须等于 DPL
- * 因此，我们必须为用户和内核复制代码段和数据段（权限不同），各自单独使用对应的段
+ * 因此，必须为用户和内核复制代码段和数据段（权限不同），各自单独使用对应的段
  * 从而使只有内核才能访问内核栈，尽管段的基址base和段限制Limit相同
  * 
  * 特别地，在gdt[]定义中使用的SEG宏的最后一个参数指定了 DPL: 0表示内核，3表示用户
@@ -244,10 +244,10 @@ int env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// 为当前准备运行的环境env的env_tf(段寄存器)设置适当的初始值
 	// GD_UD 是 GDT中的用户数据段选择子，GD_UT 是用户代码段选择子
 	// 每个段寄存器的低两位包含当前访问者权限级别(RPL); 0:内核，3:用户
-	// 当我们切换特权级别时，硬件会进行各种检查，包括RPL和存储在段描述符本身中的描述符特权级别(DPL)
+	// 当切换特权级别时，硬件会进行各种检查，包括RPL和存储在段描述符本身中的描述符特权级别(DPL)
 	// tf_rsp: 初始化为 USTACKTOP，表示当前用户栈为NULL
 	// tf_cs: 初始化为用户段选择子，用户可访问
-	// tf_rip: 这里 rip 的值就是我们在 load_icode() 里设置的用户程序入口地址
+	// tf_rip: 这里 rip 的值就是在 load_icode() 里设置的用户程序入口地址
 	e->env_tf.tf_ds = GD_UD | DPL_USER;
 	e->env_tf.tf_es = GD_UD | DPL_USER;
 	e->env_tf.tf_ss = GD_UD | DPL_USER;
@@ -529,7 +529,7 @@ void env_destroy(struct Env *e)
  */
 void env_pop_tf(struct Trapframe *tf)
 {
-	// 为了便于用户空间调试，记录我们正在运行的CPU
+	// 为了便于用户空间调试，记录正在运行的CPU
 	curenv->env_cpunum = cpunum();
 
 	__asm __volatile(

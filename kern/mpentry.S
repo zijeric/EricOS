@@ -76,7 +76,7 @@ start32:
 	orl     $CR0_PE, %eax
 	movl    %eax, %cr0
 
-	# 设置初始页表，我们还不能使用 boot_pml4e，因为 EIP 仍然在低地址空间运行.
+	# 设置初始页表，还不能使用 boot_pml4e，因为 EIP 仍然在低地址空间运行.
 	movl    $pml4, %eax
 	movl    %eax, %cr3
 

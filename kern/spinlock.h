@@ -50,7 +50,7 @@ unlock_kernel(void)
 {
 	spin_unlock(&kernel_lock);
 
-	// 通常我们不需要这样做，但是qemu一次只运行一个CPU，并且有很长的时间片
+	// 通常不需要这样做，但是qemu一次只运行一个CPU，并且有很长的时间片
 	// 没有暂停，这个CPU可能会在另一个CPU有机会获取锁之前重新获取锁
 	// 导致某个CPU死锁
 	asm volatile("pause");

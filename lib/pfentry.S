@@ -10,9 +10,9 @@
 // - 调用具体的页错误处理函数(由 lib/pgfault.c 的代码注册到环境结构的字段)，返回执行引起页错误的代码
 // - 处理后直接返回不必经过内核，因为在上文 page_fault_handler() 压入栈的 UTrapframe 保存了出错前环境的状态
 
-// 当页错误发生时，内核将我们的 %rsp 切换到用户异常栈(非嵌套页错误)，然后将一个 UTrapframe push 进栈传递给用户
-// 如果这是一个嵌套错误，递归调用时，内核将在用户异常栈 %esp 之上为我们保留 8-Byte(存储 %rip)
-// 然后，我们在 c 代码中调用由全局变量 _pgfault_handler 指向的页错误处理函数.
+// 当页错误发生时，内核将的 %rsp 切换到用户异常栈(非嵌套页错误)，然后将一个 UTrapframe push 进栈传递给用户
+// 如果这是一个嵌套错误，递归调用时，内核将在用户异常栈 %esp 之上为保留 8-Byte(存储 %rip)
+// 然后，在 c 代码中调用由全局变量 _pgfault_handler 指向的页错误处理函数.
 /*
 	UTrapframe 在栈(UXSTACKTOP)中结构：
 			.				<-- UXSTACKTOP
@@ -57,7 +57,7 @@ _pgfault_upcall:
 		已经从C代码的页错误处理函数返回(栈平衡)，为了返回执行页错误前的指令，push trap-time %rip 到用户异常栈上
 		但是，不能直接从用户异常栈返回(jmp/ret): 必须恢复 trap-time 的环境状态
 		因此，push trap-time %rip 到 trap-time 栈上!
-		接下来，我们将切换到该栈并调用 ret，它将把 %rip 恢复到页错误前的值
+		接下来，将切换到该栈并调用 ret，它将把 %rip 恢复到页错误前的值
 		在用户异常栈上出现嵌套页错误的时 ...
 
 		UTrapframe 在栈(UXSTACKTOP)中结构：

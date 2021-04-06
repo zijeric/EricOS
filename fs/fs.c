@@ -1,4 +1,4 @@
-// 规范文件系统的磁盘结构
+// 规范文件系统的磁盘结构，并实现文件系统的核心功能，比如文件的增删和读写
 #include "inc/string.h"
 #include "fs.h"
 
@@ -7,26 +7,28 @@
 // --------------------------------------------------------------
 
 // 验证文件系统的超级块Validate the file system super-block.
-void
-check_super(void)
+void check_super(void)
 {
 	if (super->s_magic != FS_MAGIC)
 		panic("bad file system magic number");
 
-	if (super->s_nblocks > DISKSIZE/BLKSIZE)
+	if (super->s_nblocks > DISKSIZE / BLKSIZE)
 		panic("file system is too large");
 
 	cprintf("superblock is good\n");
 }
 
-
 // --------------------------------------------------------------
 // 文件系统结构
 // --------------------------------------------------------------
 
-// 初始化文件系统
-void
-fs_init(void)
+/**
+ * 初始化文件系统(初始化super和bitmap全局指针变量)
+ * 文件系统环境只要访问虚拟内存[DISKMAP, DISKMAP+DISKMAX]范围中的地址addr，就会访问到磁盘((uint32_t)addr - DISKMAP) / BLKSIZE block中的数据
+ * 如果block数据还没复制到内存物理页，bc_pgfault()缺页处理函数会将数据从磁盘拷贝到某个物理页，并且将addr映射到该物理页
+ * 这样FS环境只需要访问虚拟地址空间[DISKMAP, DISKMAP+DISKMAX]就能访问磁盘了
+ */
+void fs_init(void)
 {
 	static_assert(sizeof(struct File) == 256);
 
@@ -44,81 +46,81 @@ fs_init(void)
 	check_super();
 }
 
-// Find the disk block number slot for the 'filebno'th block in file 'f'.
-// Set '*ppdiskbno' to point to that slot.
-// The slot will be one of the f->f_direct[] entries,
-// or an entry in the indirect block.
-// When 'alloc' is set, this function will allocate an indirect block
-// if necessary.
-//
-//  Note, for the read-only file system (lab 5 without the challenge), 
-//        alloc will always be false.
-//
-// Returns:
-//	0 on success (but note that *ppdiskbno might equal 0).
-//	-E_NOT_FOUND if the function needed to allocate an indirect block, but
-//		alloc was 0.
-//	-E_NO_DISK if there's no space on the disk for an indirect block.
-//	-E_INVAL if filebno is out of range (it's >= NDIRECT + NINDIRECT).
-//
-// Analogy: This is like pgdir_walk for files.
-// Hint: Don't forget to clear any block you allocate.
-
+/**
+ * 当要将一个修改后的文件flush回磁盘，就需要使用该函数找一个文件中连接的所有磁盘块，将它们都flush block
+ * 实现：
+ * 寻找文件结构f中的第filebno个块指向的硬盘块编号放入ppdiskbno
+ * 即如果 filebno小于 NDIRECT，则返回属于 f-direct[INDIRECT]中的相应链接，否则返回 f_indirect中查找的块
+ * 如果alloc为真且相应硬盘块不存在，则分配一个
+ * 成功：返回0 (*ppdiskbno = 0)
+ * 失败：
+ * -E_NOT_FOUND: 需要分配间接块，但是alloc=0
+ * -E_NO_DISK: 磁盘上没有用于间接块的空间
+ * -E_INVAL: filebno 超出范围
+ * 类比: 这就像文件的 pml4e_walk()
+ */
 static int
 file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool alloc)
 {
-	if (filebno >= NDIRECT + NINDIRECT) {
+	/**
+	 * 这里涉及到了对文件中对于磁盘块链接的操作，一定要明确一个概念：
+	 * File结构中无论是f_direct还是f_indirect，他们存储的都是指向的物理磁盘块的编号！
+	 * 如果要对指向的磁盘块进行读写，那么必须用 diskaddr转换成文件系统地址空间后才可以进行相应的操作
+	 */
+	if (filebno >= NDIRECT + NINDIRECT)
+	{
 		return -E_INVAL;
 	}
 	uint32_t nblock = f->f_size / BLKSIZE;
-	if (filebno > nblock) {
+	if (filebno > nblock)
+	{
 		return -E_NOT_FOUND;
 	}
-	if (filebno < NDIRECT) {
+	if (filebno < NDIRECT)
+	{
 		*ppdiskbno = &f->f_direct[filebno];
 		return 0;
 	}
-	else {
-		if(!f->f_indirect) {
+	else
+	{
+		if (!f->f_indirect)
+		{
 			return -E_NOT_FOUND;
 		}
-		uint32_t* index = (uint32_t*)diskaddr(f->f_indirect);
-		*ppdiskbno = &index[filebno - NDIRECT] ;
+		uint32_t *index = (uint32_t *)diskaddr(f->f_indirect);
+		*ppdiskbno = &index[filebno - NDIRECT];
 	}
 	return 0;
-    // LAB 5: Your code here.
-	// panic("file_block_walk not implemented");
 }
 
-// Set *blk to the address in memory where the filebno'th
-// block of file 'f' would be mapped.
-//
-// Returns 0 on success, < 0 on error.  Errors are:
-//	-E_NO_DISK if a block needed to be allocated but the disk is full.
-//	-E_INVAL if filebno is out of range.
-//
-int
-file_get_block(struct File *f, uint32_t filebno, char **blk)
+/**
+ * 将 *blk 设置为内存中映射文件f的第filebno块的地址.
+ * 成功：返回0
+ * 失败：
+ *  -E_NO_DISK: 需要分配一个块，但磁盘已满
+ *  -E_INVAL: filebno 超出范围
+ */
+int file_get_block(struct File *f, uint32_t filebno, char **blk)
 {
-	if (filebno >= NDIRECT + NINDIRECT) {
+	if (filebno >= NDIRECT + NINDIRECT)
+	{
 		return -E_INVAL;
 	}
 	uint32_t *ppdiskbno;
 	int r = file_block_walk(f, filebno, &ppdiskbno, false);
 	if (r < 0)
 		return r;
-    if (!*ppdiskbno)
-        return -E_NO_DISK;
-	*blk = (char*)diskaddr(*ppdiskbno);
+	if (!*ppdiskbno)
+		return -E_NO_DISK;
+	*blk = (char *)diskaddr(*ppdiskbno);
 	return 0;
-	// LAB 5: Your code here.
-	//panic("file_block_walk not implemented");
 }
 
-// Try to find a file named "name" in dir.  If so, set *file to it.
-//
-// Returns 0 and sets *file on success, < 0 on error.  Errors are:
-//	-E_NOT_FOUND if the file is not found
+/**
+ * 在参数 dir 尝试寻找名为 name 的文件，如果找到设置 *file 指向文件
+ * 成功：返回0并设置 *file
+ * 失败：-E_NOT_FOUND，没有找到对应文件
+ */
 static int
 dir_lookup(struct File *dir, const char *name, struct File **file)
 {
@@ -127,17 +129,18 @@ dir_lookup(struct File *dir, const char *name, struct File **file)
 	char *blk;
 	struct File *f;
 
-	// Search dir for name.
-	// We maintain the invariant that the size of a directory-file
-	// is always a multiple of the file system's block size.
+	// 在 dir 中搜索 name.
+	// 保持不变条件: 目录文件的大小始终是文件系统块大小的倍数.
 	assert((dir->f_size % BLKSIZE) == 0);
 	nblock = dir->f_size / BLKSIZE;
-	for (i = 0; i < nblock; i++) {
+	for (i = 0; i < nblock; i++)
+	{
 		if ((r = file_get_block(dir, i, &blk)) < 0)
 			return r;
-		f = (struct File*) blk;
+		f = (struct File *)blk;
 		for (j = 0; j < BLKFILES; j++)
-			if (strcmp(f[j].f_name, name) == 0) {
+			if (strcmp(f[j].f_name, name) == 0)
+			{
 				*file = &f[j];
 				return 0;
 			}
@@ -145,9 +148,10 @@ dir_lookup(struct File *dir, const char *name, struct File **file)
 	return -E_NOT_FOUND;
 }
 
-
-// Skip over slashes.
-static const char*
+/**
+ * 用于路径中的字符串处理，跳过斜杠'/'.
+ */
+static const char *
 skip_slash(const char *p)
 {
 	while (*p == '/')
@@ -155,12 +159,11 @@ skip_slash(const char *p)
 	return p;
 }
 
-// Evaluate a path name, starting at the root.
-// On success, set *pf to the file we found
-// and set *pdir to the directory the file is in.
-// If we cannot find the file but find the directory
-// it should be in, set *pdir and copy the final path
-// element into lastelem.
+/**
+ * 从根目录开始查找，解析路径 path，保存其路径指向的文件
+ * 成功：则把相应的文件File结构赋值给 *pf，其所在目录的File结构赋值给 **pdir
+ * 如果找不到文件，但是找到了文件所在的目录，设置 *pdir 并将最终的 path 复制到 lastelem
+ */
 static int
 walk_path(const char *path, struct File **pdir, struct File **pf, char *lastelem)
 {
@@ -169,8 +172,6 @@ walk_path(const char *path, struct File **pdir, struct File **pf, char *lastelem
 	struct File *dir, *f;
 	int r;
 
-	// if (*path != '/')
-	//	return -E_BAD_PATH;
 	path = skip_slash(path);
 	f = &super->s_root;
 	dir = 0;
@@ -179,7 +180,8 @@ walk_path(const char *path, struct File **pdir, struct File **pf, char *lastelem
 	if (pdir)
 		*pdir = 0;
 	*pf = 0;
-	while (*path != '\0') {
+	while (*path != '\0')
+	{
 		dir = f;
 		p = path;
 		while (*path != '/' && *path != '\0')
@@ -193,8 +195,10 @@ walk_path(const char *path, struct File **pdir, struct File **pf, char *lastelem
 		if (dir->f_type != FTYPE_DIR)
 			return -E_NOT_FOUND;
 
-		if ((r = dir_lookup(dir, name, &f)) < 0) {
-			if (r == -E_NOT_FOUND && *path == '\0') {
+		if ((r = dir_lookup(dir, name, &f)) < 0)
+		{
+			if (r == -E_NOT_FOUND && *path == '\0')
+			{
 				if (pdir)
 					*pdir = dir;
 				if (lastelem)
@@ -212,14 +216,12 @@ walk_path(const char *path, struct File **pdir, struct File **pf, char *lastelem
 }
 
 // --------------------------------------------------------------
-// File operations
+// 文件操作
 // --------------------------------------------------------------
-
 
 // Open "path".  On success set *pf to point at the file and return 0.
 // On error return < 0.
-int
-file_open(const char *path, struct File **pf)
+int file_open(const char *path, struct File **pf)
 {
 	return walk_path(path, 0, pf, 0);
 }
@@ -239,7 +241,8 @@ file_read(struct File *f, void *buf, size_t count, off_t offset)
 
 	count = MIN(count, f->f_size - offset);
 
-	for (pos = offset; pos < offset + count; ) {
+	for (pos = offset; pos < offset + count;)
+	{
 		if ((r = file_get_block(f, pos / BLKSIZE, &blk)) < 0)
 			return r;
 		bn = MIN(BLKSIZE - pos % BLKSIZE, offset + count - pos);
@@ -250,6 +253,3 @@ file_read(struct File *f, void *buf, size_t count, off_t offset)
 
 	return count;
 }
-
-
-

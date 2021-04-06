@@ -422,7 +422,7 @@ Linker script and memory map
  .rela.data     0x000000800421a218        0x0 obj/kern/bootstrap.o
                 0x000000800421b000                . = ALIGN (0x1000)
 
-.data           0x000000800421b000   0x42d5b8 load address 0x000000000021b000
+.data           0x000000800421b000   0x42dd48 load address 0x000000000021b000
  *(EXCLUDE_FILE(obj/kern/bootstrap.o) .data)
  .data          0x000000800421b000    0x10042 obj/kern/entry.o
                 0x000000800421b000                bootstack
@@ -465,145 +465,145 @@ Linker script and memory map
  .data          0x000000800422b780        0x0 obj/kern/lapic.o
  .data          0x000000800422b780       0x68 obj/kern/spinlock.o
                 0x000000800422b780                kernel_lock
- .data          0x000000800422b7e8    0x16a90 obj/user/hello
+ .data          0x000000800422b7e8    0x16ad0 obj/user/hello
                 0x000000800422b7e8                _binary_obj_user_hello_start
-                0x0000008004242278                _binary_obj_user_hello_end
- .data          0x0000008004242278    0x16a90 obj/user/buggyhello
-                0x0000008004242278                _binary_obj_user_buggyhello_start
-                0x0000008004258d08                _binary_obj_user_buggyhello_end
- .data          0x0000008004258d08    0x16ad8 obj/user/buggyhello2
-                0x0000008004258d08                _binary_obj_user_buggyhello2_start
-                0x000000800426f7e0                _binary_obj_user_buggyhello2_end
- .data          0x000000800426f7e0    0x16a80 obj/user/evilhello
-                0x000000800426f7e0                _binary_obj_user_evilhello_start
-                0x0000008004286260                _binary_obj_user_evilhello_end
- .data          0x0000008004286260    0x16bc0 obj/user/testbss
-                0x0000008004286260                _binary_obj_user_testbss_start
-                0x000000800429ce20                _binary_obj_user_testbss_end
- .data          0x000000800429ce20    0x16ad8 obj/user/divzero
-                0x000000800429ce20                _binary_obj_user_divzero_start
-                0x00000080042b38f8                _binary_obj_user_divzero_end
- .data          0x00000080042b38f8    0x16a50 obj/user/breakpoint
-                0x00000080042b38f8                _binary_obj_user_breakpoint_start
-                0x00000080042ca348                _binary_obj_user_breakpoint_end
- .data          0x00000080042ca348    0x16a48 obj/user/softint
-                0x00000080042ca348                _binary_obj_user_softint_start
-                0x00000080042e0d90                _binary_obj_user_softint_end
- .data          0x00000080042e0d90    0x16a50 obj/user/badsegment
-                0x00000080042e0d90                _binary_obj_user_badsegment_start
-                0x00000080042f77e0                _binary_obj_user_badsegment_end
- .data          0x00000080042f77e0    0x16a90 obj/user/faultread
-                0x00000080042f77e0                _binary_obj_user_faultread_start
-                0x000000800430e270                _binary_obj_user_faultread_end
- .data          0x000000800430e270    0x16ab0 obj/user/faultreadkernel
-                0x000000800430e270                _binary_obj_user_faultreadkernel_start
-                0x0000008004324d20                _binary_obj_user_faultreadkernel_end
- .data          0x0000008004324d20    0x16a50 obj/user/faultwrite
-                0x0000008004324d20                _binary_obj_user_faultwrite_start
-                0x000000800433b770                _binary_obj_user_faultwrite_end
- .data          0x000000800433b770    0x16a68 obj/user/faultwritekernel
-                0x000000800433b770                _binary_obj_user_faultwritekernel_start
-                0x00000080043521d8                _binary_obj_user_faultwritekernel_end
- .data          0x00000080043521d8    0x16a60 obj/user/idle
-                0x00000080043521d8                _binary_obj_user_idle_start
-                0x0000008004368c38                _binary_obj_user_idle_end
- .data          0x0000008004368c38    0x16b10 obj/user/yield
-                0x0000008004368c38                _binary_obj_user_yield_start
-                0x000000800437f748                _binary_obj_user_yield_end
- .data          0x000000800437f748    0x170c8 obj/user/dumbfork
-                0x000000800437f748                _binary_obj_user_dumbfork_start
-                0x0000008004396810                _binary_obj_user_dumbfork_end
- .data          0x0000008004396810    0x18e98 obj/user/stresssched
-                0x0000008004396810                _binary_obj_user_stresssched_start
-                0x00000080043af6a8                _binary_obj_user_stresssched_end
- .data          0x00000080043af6a8    0x179e0 obj/user/faultdie
-                0x00000080043af6a8                _binary_obj_user_faultdie_start
-                0x00000080043c7088                _binary_obj_user_faultdie_end
- .data          0x00000080043c7088    0x18f20 obj/user/faultregs
-                0x00000080043c7088                _binary_obj_user_faultregs_start
-                0x00000080043dffa8                _binary_obj_user_faultregs_end
- .data          0x00000080043dffa8    0x17a60 obj/user/faultalloc
-                0x00000080043dffa8                _binary_obj_user_faultalloc_start
-                0x00000080043f7a08                _binary_obj_user_faultalloc_end
- .data          0x00000080043f7a08    0x17a68 obj/user/faultallocbad
-                0x00000080043f7a08                _binary_obj_user_faultallocbad_start
-                0x000000800440f470                _binary_obj_user_faultallocbad_end
- .data          0x000000800440f470    0x17808 obj/user/faultnostack
-                0x000000800440f470                _binary_obj_user_faultnostack_start
-                0x0000008004426c78                _binary_obj_user_faultnostack_end
- .data          0x0000008004426c78    0x16ac0 obj/user/faultbadhandler
-                0x0000008004426c78                _binary_obj_user_faultbadhandler_start
-                0x000000800443d738                _binary_obj_user_faultbadhandler_end
- .data          0x000000800443d738    0x16ac8 obj/user/faultevilhandler
-                0x000000800443d738                _binary_obj_user_faultevilhandler_start
-                0x0000008004454200                _binary_obj_user_faultevilhandler_end
- .data          0x0000008004454200    0x18f48 obj/user/forktree
-                0x0000008004454200                _binary_obj_user_forktree_start
-                0x000000800446d148                _binary_obj_user_forktree_end
- .data          0x000000800446d148    0x19ed0 obj/user/sendpage
-                0x000000800446d148                _binary_obj_user_sendpage_start
-                0x0000008004487018                _binary_obj_user_sendpage_end
- .data          0x0000008004487018    0x18d98 obj/user/spin
-                0x0000008004487018                _binary_obj_user_spin_start
-                0x000000800449fdb0                _binary_obj_user_spin_end
- .data          0x000000800449fdb0    0x16b30 obj/user/fairness
-                0x000000800449fdb0                _binary_obj_user_fairness_start
-                0x00000080044b68e0                _binary_obj_user_fairness_end
- .data          0x00000080044b68e0    0x18dc0 obj/user/pingpong
-                0x00000080044b68e0                _binary_obj_user_pingpong_start
-                0x00000080044cf6a0                _binary_obj_user_pingpong_end
- .data          0x00000080044cf6a0    0x16b78 obj/user/pingpongs
-                0x00000080044cf6a0                _binary_obj_user_pingpongs_start
-                0x00000080044e6218                _binary_obj_user_pingpongs_end
- .data          0x00000080044e6218    0x18ed0 obj/user/primes
-                0x00000080044e6218                _binary_obj_user_primes_start
-                0x00000080044ff0e8                _binary_obj_user_primes_end
- .data          0x00000080044ff0e8    0x17418 obj/user/testfilero
-                0x00000080044ff0e8                _binary_obj_user_testfilero_start
-                0x0000008004516500                _binary_obj_user_testfilero_end
- .data          0x0000008004516500    0x19950 obj/user/spawnhello
-                0x0000008004516500                _binary_obj_user_spawnhello_start
-                0x000000800452fe50                _binary_obj_user_spawnhello_end
- .data          0x000000800452fe50    0x19a60 obj/user/icode
-                0x000000800452fe50                _binary_obj_user_icode_start
-                0x00000080045498b0                _binary_obj_user_icode_end
- .data          0x00000080045498b0    0x27d00 obj/fs/fs
-                0x00000080045498b0                _binary_obj_fs_fs_start
-                0x00000080045715b0                _binary_obj_fs_fs_end
- .data          0x00000080045715b0    0x1d9e8 obj/user/testpteshare
-                0x00000080045715b0                _binary_obj_user_testpteshare_start
-                0x000000800458ef98                _binary_obj_user_testpteshare_end
- .data          0x000000800458ef98    0x1abd0 obj/user/testfdsharing
-                0x000000800458ef98                _binary_obj_user_testfdsharing_start
-                0x00000080045a9b68                _binary_obj_user_testfdsharing_end
- .data          0x00000080045a9b68    0x1ac30 obj/user/testpipe
-                0x00000080045a9b68                _binary_obj_user_testpipe_start
-                0x00000080045c4798                _binary_obj_user_testpipe_end
- .data          0x00000080045c4798    0x1a010 obj/user/testpiperace
-                0x00000080045c4798                _binary_obj_user_testpiperace_start
-                0x00000080045de7a8                _binary_obj_user_testpiperace_end
- .data          0x00000080045de7a8    0x19fc0 obj/user/testpiperace2
-                0x00000080045de7a8                _binary_obj_user_testpiperace2_start
-                0x00000080045f8768                _binary_obj_user_testpiperace2_end
- .data          0x00000080045f8768    0x1a038 obj/user/primespipe
-                0x00000080045f8768                _binary_obj_user_primespipe_start
-                0x00000080046127a0                _binary_obj_user_primespipe_end
- .data          0x00000080046127a0    0x181d8 obj/user/testkbd
-                0x00000080046127a0                _binary_obj_user_testkbd_start
-                0x000000800462a978                _binary_obj_user_testkbd_end
- .data          0x000000800462a978    0x1dc40 obj/user/testshell
-                0x000000800462a978                _binary_obj_user_testshell_start
-                0x00000080046485b8                _binary_obj_user_testshell_end
-                0x00000080046485b8                PROVIDE (edata = .)
+                0x00000080042422b8                _binary_obj_user_hello_end
+ .data          0x00000080042422b8    0x16ac0 obj/user/buggyhello
+                0x00000080042422b8                _binary_obj_user_buggyhello_start
+                0x0000008004258d78                _binary_obj_user_buggyhello_end
+ .data          0x0000008004258d78    0x16b18 obj/user/buggyhello2
+                0x0000008004258d78                _binary_obj_user_buggyhello2_start
+                0x000000800426f890                _binary_obj_user_buggyhello2_end
+ .data          0x000000800426f890    0x16ac0 obj/user/evilhello
+                0x000000800426f890                _binary_obj_user_evilhello_start
+                0x0000008004286350                _binary_obj_user_evilhello_end
+ .data          0x0000008004286350    0x16bf0 obj/user/testbss
+                0x0000008004286350                _binary_obj_user_testbss_start
+                0x000000800429cf40                _binary_obj_user_testbss_end
+ .data          0x000000800429cf40    0x16b18 obj/user/divzero
+                0x000000800429cf40                _binary_obj_user_divzero_start
+                0x00000080042b3a58                _binary_obj_user_divzero_end
+ .data          0x00000080042b3a58    0x16a90 obj/user/breakpoint
+                0x00000080042b3a58                _binary_obj_user_breakpoint_start
+                0x00000080042ca4e8                _binary_obj_user_breakpoint_end
+ .data          0x00000080042ca4e8    0x16a78 obj/user/softint
+                0x00000080042ca4e8                _binary_obj_user_softint_start
+                0x00000080042e0f60                _binary_obj_user_softint_end
+ .data          0x00000080042e0f60    0x16a90 obj/user/badsegment
+                0x00000080042e0f60                _binary_obj_user_badsegment_start
+                0x00000080042f79f0                _binary_obj_user_badsegment_end
+ .data          0x00000080042f79f0    0x16ad0 obj/user/faultread
+                0x00000080042f79f0                _binary_obj_user_faultread_start
+                0x000000800430e4c0                _binary_obj_user_faultread_end
+ .data          0x000000800430e4c0    0x16ae0 obj/user/faultreadkernel
+                0x000000800430e4c0                _binary_obj_user_faultreadkernel_start
+                0x0000008004324fa0                _binary_obj_user_faultreadkernel_end
+ .data          0x0000008004324fa0    0x16a90 obj/user/faultwrite
+                0x0000008004324fa0                _binary_obj_user_faultwrite_start
+                0x000000800433ba30                _binary_obj_user_faultwrite_end
+ .data          0x000000800433ba30    0x16aa8 obj/user/faultwritekernel
+                0x000000800433ba30                _binary_obj_user_faultwritekernel_start
+                0x00000080043524d8                _binary_obj_user_faultwritekernel_end
+ .data          0x00000080043524d8    0x16aa0 obj/user/idle
+                0x00000080043524d8                _binary_obj_user_idle_start
+                0x0000008004368f78                _binary_obj_user_idle_end
+ .data          0x0000008004368f78    0x16b40 obj/user/yield
+                0x0000008004368f78                _binary_obj_user_yield_start
+                0x000000800437fab8                _binary_obj_user_yield_end
+ .data          0x000000800437fab8    0x17108 obj/user/dumbfork
+                0x000000800437fab8                _binary_obj_user_dumbfork_start
+                0x0000008004396bc0                _binary_obj_user_dumbfork_end
+ .data          0x0000008004396bc0    0x18ed8 obj/user/stresssched
+                0x0000008004396bc0                _binary_obj_user_stresssched_start
+                0x00000080043afa98                _binary_obj_user_stresssched_end
+ .data          0x00000080043afa98    0x17a20 obj/user/faultdie
+                0x00000080043afa98                _binary_obj_user_faultdie_start
+                0x00000080043c74b8                _binary_obj_user_faultdie_end
+ .data          0x00000080043c74b8    0x18f60 obj/user/faultregs
+                0x00000080043c74b8                _binary_obj_user_faultregs_start
+                0x00000080043e0418                _binary_obj_user_faultregs_end
+ .data          0x00000080043e0418    0x17aa0 obj/user/faultalloc
+                0x00000080043e0418                _binary_obj_user_faultalloc_start
+                0x00000080043f7eb8                _binary_obj_user_faultalloc_end
+ .data          0x00000080043f7eb8    0x17aa8 obj/user/faultallocbad
+                0x00000080043f7eb8                _binary_obj_user_faultallocbad_start
+                0x000000800440f960                _binary_obj_user_faultallocbad_end
+ .data          0x000000800440f960    0x17848 obj/user/faultnostack
+                0x000000800440f960                _binary_obj_user_faultnostack_start
+                0x00000080044271a8                _binary_obj_user_faultnostack_end
+ .data          0x00000080044271a8    0x16b00 obj/user/faultbadhandler
+                0x00000080044271a8                _binary_obj_user_faultbadhandler_start
+                0x000000800443dca8                _binary_obj_user_faultbadhandler_end
+ .data          0x000000800443dca8    0x16b08 obj/user/faultevilhandler
+                0x000000800443dca8                _binary_obj_user_faultevilhandler_start
+                0x00000080044547b0                _binary_obj_user_faultevilhandler_end
+ .data          0x00000080044547b0    0x18f88 obj/user/forktree
+                0x00000080044547b0                _binary_obj_user_forktree_start
+                0x000000800446d738                _binary_obj_user_forktree_end
+ .data          0x000000800446d738    0x19f10 obj/user/sendpage
+                0x000000800446d738                _binary_obj_user_sendpage_start
+                0x0000008004487648                _binary_obj_user_sendpage_end
+ .data          0x0000008004487648    0x18dd8 obj/user/spin
+                0x0000008004487648                _binary_obj_user_spin_start
+                0x00000080044a0420                _binary_obj_user_spin_end
+ .data          0x00000080044a0420    0x16b70 obj/user/fairness
+                0x00000080044a0420                _binary_obj_user_fairness_start
+                0x00000080044b6f90                _binary_obj_user_fairness_end
+ .data          0x00000080044b6f90    0x18e00 obj/user/pingpong
+                0x00000080044b6f90                _binary_obj_user_pingpong_start
+                0x00000080044cfd90                _binary_obj_user_pingpong_end
+ .data          0x00000080044cfd90    0x16bb8 obj/user/pingpongs
+                0x00000080044cfd90                _binary_obj_user_pingpongs_start
+                0x00000080044e6948                _binary_obj_user_pingpongs_end
+ .data          0x00000080044e6948    0x18f10 obj/user/primes
+                0x00000080044e6948                _binary_obj_user_primes_start
+                0x00000080044ff858                _binary_obj_user_primes_end
+ .data          0x00000080044ff858    0x17458 obj/user/testfilero
+                0x00000080044ff858                _binary_obj_user_testfilero_start
+                0x0000008004516cb0                _binary_obj_user_testfilero_end
+ .data          0x0000008004516cb0    0x19980 obj/user/spawnhello
+                0x0000008004516cb0                _binary_obj_user_spawnhello_start
+                0x0000008004530630                _binary_obj_user_spawnhello_end
+ .data          0x0000008004530630    0x19a90 obj/user/icode
+                0x0000008004530630                _binary_obj_user_icode_start
+                0x000000800454a0c0                _binary_obj_user_icode_end
+ .data          0x000000800454a0c0    0x27ab0 obj/fs/fs
+                0x000000800454a0c0                _binary_obj_fs_fs_start
+                0x0000008004571b70                _binary_obj_fs_fs_end
+ .data          0x0000008004571b70    0x1da18 obj/user/testpteshare
+                0x0000008004571b70                _binary_obj_user_testpteshare_start
+                0x000000800458f588                _binary_obj_user_testpteshare_end
+ .data          0x000000800458f588    0x1ac00 obj/user/testfdsharing
+                0x000000800458f588                _binary_obj_user_testfdsharing_start
+                0x00000080045aa188                _binary_obj_user_testfdsharing_end
+ .data          0x00000080045aa188    0x1ac70 obj/user/testpipe
+                0x00000080045aa188                _binary_obj_user_testpipe_start
+                0x00000080045c4df8                _binary_obj_user_testpipe_end
+ .data          0x00000080045c4df8    0x1a050 obj/user/testpiperace
+                0x00000080045c4df8                _binary_obj_user_testpiperace_start
+                0x00000080045dee48                _binary_obj_user_testpiperace_end
+ .data          0x00000080045dee48    0x1a000 obj/user/testpiperace2
+                0x00000080045dee48                _binary_obj_user_testpiperace2_start
+                0x00000080045f8e48                _binary_obj_user_testpiperace2_end
+ .data          0x00000080045f8e48    0x1a078 obj/user/primespipe
+                0x00000080045f8e48                _binary_obj_user_primespipe_start
+                0x0000008004612ec0                _binary_obj_user_primespipe_end
+ .data          0x0000008004612ec0    0x18208 obj/user/testkbd
+                0x0000008004612ec0                _binary_obj_user_testkbd_start
+                0x000000800462b0c8                _binary_obj_user_testkbd_end
+ .data          0x000000800462b0c8    0x1dc80 obj/user/testshell
+                0x000000800462b0c8                _binary_obj_user_testshell_start
+                0x0000008004648d48                _binary_obj_user_testshell_end
+                0x0000008004648d48                PROVIDE (edata = .)
 
-.got            0x00000080046485b8        0x0 load address 0x00000000006485b8
- .got           0x00000080046485b8        0x0 obj/kern/bootstrap.o
+.got            0x0000008004648d48        0x0 load address 0x0000000000648d48
+ .got           0x0000008004648d48        0x0 obj/kern/bootstrap.o
 
-.got.plt        0x00000080046485b8        0x0 load address 0x00000000006485b8
- .got.plt       0x00000080046485b8        0x0 obj/kern/bootstrap.o
+.got.plt        0x0000008004648d48        0x0 load address 0x0000000000648d48
+ .got.plt       0x0000008004648d48        0x0 obj/kern/bootstrap.o
 
-.igot.plt       0x00000080046485b8        0x0 load address 0x00000000006485b8
- .igot.plt      0x00000080046485b8        0x0 obj/kern/bootstrap.o
+.igot.plt       0x0000008004648d48        0x0 load address 0x0000000000648d48
+ .igot.plt      0x0000008004648d48        0x0 obj/kern/bootstrap.o
 
 .bss            0x0000008004649000    0x84010 load address 0x0000000000649000
  *(EXCLUDE_FILE(obj/kern/bootstrap.o) .bss)
