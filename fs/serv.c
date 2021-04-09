@@ -176,8 +176,6 @@ serve_read(envid_t envid, union Fsipc *ipc)
 	// than requested).  Also, be careful because ipc is a union,
 	// so filling in ret will overwrite req.
 	//
-	// LAB 5: Your code here
-	//panic("serve_read not implemented");
 	struct OpenFile *po;
 	int r = openfile_lookup(envid, req->req_fileid, &po);
 	if (r < 0) {
