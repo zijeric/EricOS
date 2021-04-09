@@ -23,10 +23,10 @@
 // 通过使用 PGADDR(PML4(la)、PDPE(la)、PDX(la)、PTX(la)、PGOFF(la))
 // 构造由 PML4(la)、PDPE(la)、PDX(la)、PTX(la) 和 PGOFF(la) 组成的线性地址 la.(如上图)
 
-// 用于索引到 vpt[], 同 PPN, (PML4 + PDPE + PDX + PTX) 右移12位
+// 用于索引到 vpt[], (PML4 + PDPE + PDX + PTX) 右移12位
 #define PPN(pa) (((uintptr_t)(pa)) >> PTXSHIFT)
-#define VPN(la) PPN(la)	  // used to index into vpt[]
-#define PGNUM(la) PPN(la) // used to index into vpt[]
+#define VPN(la) PPN(la)	  // 用于索引到 vpt[], 同 PPN
+#define PGNUM(la) PPN(la) // 用于索引到 vpt[], 同 PPN
 
 // 用于索引到 vpd[], (PML4 + PDPE + PDX) 右移21位
 #define VPD(la) (((uintptr_t)(la)) >> PDXSHIFT)
@@ -67,7 +67,7 @@
 #define PDPESHIFT 30 // 线性地址中页目录指针页索引(PDPE)的偏移
 #define PML4SHIFT 39 // 线性地址中4级页表索引(PML4)的偏移
 
-// 页目录表/页表的权限位，在访问对应页时CPU会自动地判断，如果访问违规，会产生异常.
+// 4级映射页表页/页目录指针页/页目录表/页表的权限位，在访问对应页时CPU会自动地判断，如果访问违规，会产生异常.
 #define PTE_P 0x001	  // Present		存在位
 #define PTE_W 0x002	  // Writeable	可写位，同时影响 kernel 和 user
 #define PTE_U 0x004	  // User			用户1->(0,1,2,3), 管理员0->(0,1,2)
@@ -76,7 +76,7 @@
 #define PTE_A 0x020	  // Accessed		访问位，由CPU设置，1:已访问可换出到外存
 #define PTE_D 0x040	  // Dirty		脏页位，针对页表项，CPU写时置为1
 #define PTE_PS 0x080  // Page Size	页大小位，0:4KB, 1:4MB
-#define PTE_MBZ 0x180 // Bits must be zero 2MB物理页该位必须为0
+#define PTE_MBZ 0x180 // Bits must be zero 启用2MB物理页该位必须为0
 
 // 内核不使用 PTE_AVAIL 位，硬件也不对其进行解释.
 // 供用户环境使用

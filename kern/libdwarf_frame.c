@@ -101,19 +101,8 @@ int _dwarf_frame_regtable_copy(Dwarf_Debug dbg, Dwarf_Regtable3 **dest,
         if (*dest == NULL)
         {
                 *dest = &global_rt_table_shadow;
-                /*if ((*dest = malloc(sizeof(Dwarf_Regtable3))) == NULL) {
-                        DWARF_SET_ERROR(dbg, error, DW_DLE_MEMORY);
-                        return (DW_DLE_MEMORY);
-                }*/
                 (*dest)->rt3_reg_table_size = src->rt3_reg_table_size;
                 (*dest)->rt3_rules = global_rules_shadow;
-                /*(*dest)->rt3_rules = malloc(src->rt3_reg_table_size *
-                    sizeof(Dwarf_Regtable_Entry3));
-                if ((*dest)->rt3_rules == NULL) {
-                        free(*dest);
-                        DWARF_SET_ERROR(dbg, error, DW_DLE_MEMORY);
-                        return (DW_DLE_MEMORY);
-                }*/
         }
 
         memcpy(&(*dest)->rt3_cfa_rule, &src->rt3_cfa_rule,

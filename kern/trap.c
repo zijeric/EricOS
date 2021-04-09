@@ -290,7 +290,6 @@ void print_regs(struct PushRegs *regs)
 	cprintf("  rax  0x%08x\n", regs->reg_rax);
 }
 
-
 /**
  * 处理环境产生的异常(分发异常到对应的处理函数).
  */
@@ -514,4 +513,3 @@ void page_fault_handler(struct Trapframe *tf)
 	print_trapframe(tf);
 	env_destroy(curenv);
 }
-
