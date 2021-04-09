@@ -35,12 +35,12 @@ static int devfile_stat(struct Fd *fd, struct Stat *stat);
 static int devfile_trunc(struct Fd *fd, off_t newsize);
 
 struct Dev devfile =
-{
-	.dev_id =	'f',
-	.dev_name =	"file",
-	.dev_read =	devfile_read,
-	.dev_close = devfile_flush,
-	.dev_stat =	devfile_stat,
+	{
+		.dev_id = 'f',
+		.dev_name = "file",
+		.dev_read = devfile_read,
+		.dev_close = devfile_flush,
+		.dev_stat = devfile_stat,
 };
 
 // Open a file (or directory).
@@ -50,10 +50,10 @@ struct Dev devfile =
 // 	-E_BAD_PATH if the path is too long (>= MAXPATHLEN)
 // 	< 0 for other errors.
 
-int
-open(const char *path, int mode)
+int open(const char *path, int mode)
 {
-	if(strlen(path) >= MAXPATHLEN) {
+	if (strlen(path) >= MAXPATHLEN)
+	{
 		return -E_BAD_PATH;
 	}
 	// Find an unused file descriptor page using fd_alloc.
@@ -72,27 +72,31 @@ open(const char *path, int mode)
 	// LAB 5: Your code here
 	struct Fd *new_fd;
 	int r = fd_alloc(&new_fd);
-	if (r<0) {
+	if (r < 0)
+	{
 		return r;
 	}
 	fsipcbuf.open.req_omode = mode;
 	strcpy(fsipcbuf.open.req_path, path);
 	r = fsipc(FSREQ_OPEN, new_fd);
-	if (r<0) {
+	if (r < 0)
+	{
 		fd_close(new_fd, 0);
-		return r;	
+		return r;
 	}
 	return fd2num(new_fd);
 }
 
-// Flush the file descriptor.  After this the fileid is invalid.
-//
-// This function is called by fd_close.  fd_close will take care of
-// unmapping the FD page from this environment.  Since the server uses
-// the reference counts on the FD pages to detect which files are
-// open, unmapping it is enough to free up server-side resources.
-// Other than that, we just have to make sure our changes are flushed
-// to disk.
+/**
+ * 将缓冲区写入磁盘称为缓冲区刷新。
+ * 当用户线程修改缓冲区中的数据时，它将缓冲区标记为dirty。
+ * 当数据库服务器将缓冲区刷新到磁盘时，它随后将缓冲区标记为未弄脏，并允许覆盖缓冲区中的数据
+ * flush 文件描述符，在此之后，fileid 无效
+ * 这个函数被 fd_close() 调用
+ * fd_close() 将负责解除这个环境中的FD页面映射
+ * 由于服务器使用FD页面上的引用计数来检测哪些文件打开了，取消它的映射就足以释放服务器端资源
+ * 除此之外，我们只需要确保我们的更改被 flush 到磁盘上
+ */
 static int
 devfile_flush(struct Fd *fd)
 {
@@ -114,10 +118,11 @@ devfile_read(struct Fd *fd, void *buf, size_t n)
 	// system server.
 	// LAB 5: Your code here
 	// panic("devfile_read not implemented");
-	fsipcbuf.read.req_fileid =  fd->fd_file.id;
+	fsipcbuf.read.req_fileid = fd->fd_file.id;
 	fsipcbuf.read.req_n = n;
 	ssize_t nbytes = fsipc(FSREQ_READ, NULL);
-	if(nbytes > 0) {
+	if (nbytes > 0)
+	{
 		memmove(buf, fsipcbuf.readRet.ret_buf, nbytes);
 	}
 	return nbytes;

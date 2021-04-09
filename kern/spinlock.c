@@ -65,8 +65,8 @@ void spin_lock(struct spinlock *lk)
 		panic("CPU %d cannot acquire %s: already holding", cpunum(), lk->name);
 #endif
 
-		// xchg 是原子操作，而且是序列化的，因此调用 acquire() 之后的读取不会在它之前被重新排序
-		while (xchg(&lk->locked, 1) != 0)
+	// xchg 是原子操作，而且是序列化的，因此调用 acquire() 之后的读取不会在它之前被重新排序
+	while (xchg(&lk->locked, 1) != 0)
 		asm volatile("pause");
 
 		// 记录关于调试的获取锁信息.

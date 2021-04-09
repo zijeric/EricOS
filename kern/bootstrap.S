@@ -176,13 +176,12 @@ verify_cpu:
     pushfl
     popl %eax
     cmpl %eax, %ebx
-    jz verify_cpu_no_longmode   # 无 cpuid -- 无 long mode
+    jz verify_cpu_no_longmode   # cpuid 检测 -- 无长模式
 
     movl $0x0, %eax              # 查看 cpuid 1是否已经实现
     cpuid
     cmpl $0x1, %eax
     jb verify_cpu_no_longmode    # cpuid 1 尚未实现
-
 
     mov $0x80000001,  %eax
     cpuid                 

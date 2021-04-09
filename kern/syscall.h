@@ -1,7 +1,7 @@
 #ifndef ALVOS_KERN_SYSCALL_H
 #define ALVOS_KERN_SYSCALL_H
 #ifndef ALVOS_KERNEL
-# error "This is a AlvOS kernel header; user programs should not #include it"
+#error "This is a AlvOS kernel header; user programs should not #include it"
 #endif
 
 #include "inc/syscall.h"

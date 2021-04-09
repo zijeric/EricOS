@@ -15,7 +15,6 @@ void env_init_percpu(void);
 int env_alloc(struct Env **e, envid_t parent_id);
 void env_free(struct Env *e);
 void env_create(uint8_t *binary, enum EnvType type);
-// if e == curenv, 不返回
 void env_destroy(struct Env *e);
 
 int envid2env(envid_t envid, struct Env **env_store, bool checkperm);

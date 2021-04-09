@@ -47,7 +47,7 @@ void fs_init(void)
 }
 
 /**
- * 当要将一个修改后的文件flush回磁盘，就需要使用该函数找一个文件中连接的所有磁盘块，将它们都flush block
+ * 当要将一个修改后的文件 flush 回磁盘，就需要使用该函数找一个文件中连接的所有磁盘块，将它们都flush block
  * 实现：
  * 寻找文件结构f中的第filebno个块指向的硬盘块编号放入ppdiskbno
  * 即如果 filebno小于 NDIRECT，则返回属于 f-direct[INDIRECT]中的相应链接，否则返回 f_indirect中查找的块
