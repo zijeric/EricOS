@@ -312,7 +312,7 @@ void x64_vm_init(void)
 	pml4e_t *pml4e;
 	struct Env *env;
 
-	// 1.通过 multiboot/硬件 查看可以使用的内存大小 (底层 kern/kclock.c)
+	// 1.通过 multiboot 查看可以使用的内存大小 (底层 kern/kclock.c)
 	// 赋值全局变量 npages(总内存量所需的页表个数) 和 npages_basemem(基础内存量所需页表个数)，用于计算 PageInfo 个数
 	// base memory: [0, 0xA0000), BIOS: [0xA0000, 0x100000), extmem: [0x100000, 0x10000000)
 	i386_detect_memory();
@@ -1047,7 +1047,7 @@ void user_mem_assert(struct Env *env, const void *va, size_t len, int perm)
 	{
 		cprintf("[%08x] user_mem_check assertion failure for va %08x\n",
 				env->env_id, user_mem_check_addr);
-		 // 不返回
+		// 不返回
 		env_destroy(env);
 	}
 }

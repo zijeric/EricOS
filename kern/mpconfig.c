@@ -36,52 +36,52 @@ unsigned char percpu_kstacks[NCPU][KSTKSIZE]
 struct mp
 {						  // 浮动指针 [MP 4.1]
 	uint8_t signature[4]; // "_MP_"
-	uint32_t physaddr;	  // phys addr of MP config table
+	uint32_t physaddr;	  // MP 配置表的物理地址
 	uint8_t length;		  // 1
 	uint8_t specrev;	  // [14]
-	uint8_t checksum;	  // all bytes must add up to 0
+	uint8_t checksum;	  // 校验和: 所有字节的总和必须为0
 	uint8_t type;		  // MP system config type
 	uint8_t imcrp;
 	uint8_t reserved[3];
 } __attribute__((__packed__));
 
 struct mpconf
-{						  // configuration table header [MP 4.2]
+{						  // 配置表头部 [MP 4.2]
 	uint8_t signature[4]; // "PCMP"
-	uint16_t length;	  // total table length
+	uint16_t length;	  // 表的总长度
 	uint8_t version;	  // [14]
-	uint8_t checksum;	  // all bytes must add up to 0
+	uint8_t checksum;	  // 校验和: 所有字节的总和必须为0
 	uint8_t product[20];  // product id
-	uint32_t oemtable;	  // OEM table pointer
-	uint16_t oemlength;	  // OEM table length
-	uint16_t entry;		  // entry count
-	uint32_t lapicaddr;	  // address of local APIC
-	uint16_t xlength;	  // extended table length
-	uint8_t xchecksum;	  // extended table checksum
+	uint32_t oemtable;	  // 指向 OEM 表的指针
+	uint16_t oemlength;	  // OEM 表的长度
+	uint16_t entry;		  // 项数
+	uint32_t lapicaddr;	  // local APIC 的地址
+	uint16_t xlength;	  // 拓展表的长度
+	uint8_t xchecksum;	  // 拓展表的校验和
 	uint8_t reserved;
-	uint8_t entries[0]; // table entries
+	uint8_t entries[0]; // 表项
 } __attribute__((__packed__));
 
 struct mpproc
-{						  // processor table entry [MP 4.3.1]
+{						  // 处理器表项 [MP 4.3.1]
 	uint8_t type;		  // entry type (0)
 	uint8_t apicid;		  // local APIC id
-	uint8_t version;	  // local APIC version
-	uint8_t flags;		  // CPU flags
-	uint8_t signature[4]; // CPU signature
-	uint32_t feature;	  // feature flags from CPUID instruction
+	uint8_t version;	  // local APIC 版本
+	uint8_t flags;		  // CPU 标志位
+	uint8_t signature[4]; // CPU 签名
+	uint32_t feature;	  // 来自 CPUID 指令的特性标志
 	uint8_t reserved[8];
 } __attribute__((__packed__));
 
-// mpproc flags
-#define MPPROC_BOOT 0x02 // This mpproc is the bootstrap processor
+// mpproc 标志
+#define MPPROC_BOOT 0x02 // 这个 mpproc 是标志引导处理器 BSP
 
-// Table entry types
-#define MPPROC 0x00	  // One per processor
-#define MPBUS 0x01	  // One per bus
-#define MPIOAPIC 0x02 // One per I/O APIC
-#define MPIOINTR 0x03 // One per bus interrupt source
-#define MPLINTR 0x04  // One per system interrupt source
+// 表项类型
+#define MPPROC 0x00	  // per processor 一个
+#define MPBUS 0x01	  // 每条总线一个
+#define MPIOAPIC 0x02 // per I/O APIC 一个
+#define MPIOINTR 0x03 // 每条总线中断源一个
+#define MPLINTR 0x04  // 每个系统中断源一个
 
 static uint8_t
 sum(void *addr, int len)
@@ -94,7 +94,7 @@ sum(void *addr, int len)
 	return sum;
 }
 
-// Look for an MP structure in the len bytes at physical address addr.
+// 在物理地址 addr 的 len 字节中查找 MP 结构.
 static struct mp *
 mpsearch1(physaddr_t a, int len)
 {
@@ -119,8 +119,6 @@ mpsearch(void)
 	uint8_t *bda;
 	uint32_t p;
 	struct mp *mp;
-
-	//static_assert(sizeof(*mp) == 32);
 
 	// The BIOS data area lives in 16-bit segment 0x40.
 	bda = (uint8_t *)KADDR(0x40 << 4);
@@ -185,7 +183,7 @@ mpconfig(struct mp **pmp)
 }
 
 /**
- * 在启动APs之前，BSP 从 BIOS 的内存区域中读取 MP 配置表[mp_init()的作用]，收集多处理器系统的信息，
+ * 在启动APs之前，BSP 从 BIOS 的内存区域中读取 MP 配置表[mp_init()的作用]，收集多处理器系统的信息
  * 比如CPUs数目、APIC IDs、LAPIC单元的MMIO地址
  * 通过读取驻留在BIOS内存区域中的MP配置表来检索此信息，也就是说在出厂时，厂家就将此计算机的处理器信息写入了BIOS中，
  * 其有一定的规范，也就是kern/mpconfig.c中struct mp定义的
@@ -206,7 +204,7 @@ void mp_init(void)
 	unsigned int i;
 
 	bootcpu = &cpus[0];
-	// 调用 mpconfig() 从BIOS中读取浮动指针 mp
+	// 调用 mpconfig() 从 BIOS 中读取浮动指针 mp
 	if ((conf = mpconfig(&mp)) == 0)
 		return;
 	ismp = 1;
@@ -263,10 +261,9 @@ void mp_init(void)
 
 	if (mp->imcrp)
 	{
-		// [MP 3.2.6.1] If the hardware implements PIC mode,
-		// switch to getting interrupts from the LAPIC.
+		// [MP 3.2.6.1] 如果硬件实现 PIC 模式，切换到从 LAPIC 获得中断.
 		cprintf("SMP: Setting IMCR to switch from PIC mode to symmetric I/O mode\n");
-		outb(0x22, 0x70);		   // Select IMCR
-		outb(0x23, inb(0x23) | 1); // Mask external interrupts.
+		outb(0x22, 0x70);		   // 选中 IMCR
+		outb(0x23, inb(0x23) | 1); // 屏蔽外部中断.
 	}
 }

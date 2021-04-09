@@ -1,5 +1,5 @@
 // 用于支持多处理器的内核私有定义
-// Per-CPU: 
+// Per-CPU:
 // 1.Per-CPU kernel stack 多个CPU可以同时 trap 到内核
 // 2.Per-CPU TSS and TSS descriptor 寻址Per-CPU的内核栈
 // 3.Per-CPU current environment pointer 指向Per-CPU的当前环境
@@ -14,17 +14,19 @@
 #include "inc/env.h"
 
 // CPU最大装载数量
-#define NCPU  8
+#define NCPU 8
 
 // Values of status in struct Cpu
-enum {
+enum
+{
 	CPU_UNUSED = 0,
 	CPU_STARTED,
 	CPU_HALTED,
 };
 
 // per-CPU 的状态信息
-struct CpuInfo {
+struct CpuInfo
+{
 	// local APIC ID; 索引到cpus[]
 	uint8_t cpu_id;
 

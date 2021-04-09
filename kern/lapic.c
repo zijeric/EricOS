@@ -43,18 +43,23 @@
 #define TCCR (0x0390 / 4)	// Timer Current Count
 #define TDCR (0x03E0 / 4)	// Timer Divide Configuration
 
-physaddr_t lapicaddr; // Initialized in mpconfig.c
+physaddr_t lapicaddr; // local APIC 的地址，在 mpconfig.c 中初始化
 volatile uint32_t *lapic;
 
 static void
 lapicw(int index, int value)
 {
 	lapic[index] = value;
-	lapic[ID]; // wait for write to finish, by reading
+	lapic[ID]; // 通过读取，等待写操作完成
 }
 
+/**
+ * 
+ * 
+ */
 void lapic_init(void)
 {
+	// 尚未初始化 local APIC 的地址，BSP 尚未获取多处理器系统的信息，不能继续
 	if (!lapicaddr)
 		return;
 
@@ -62,52 +67,46 @@ void lapic_init(void)
 	// 为了可以访问它，把它映射到虚拟内存中.
 	lapic = mmio_map_region(lapicaddr, 4096);
 
-	// Enable local APIC; set spurious interrupt vector.
+	// 启用本地APIC；设置虚假中断向量.
 	lapicw(SVR, ENABLE | (IRQ_OFFSET + IRQ_SPURIOUS));
 
-	// The timer repeatedly counts down at bus frequency
-	// from lapic[TICR] and then issues an interrupt.
-	// If we cared more about precise timekeeping,
-	// TICR would be calibrated using an external time source.
+	// 计时器以总线频率从lapic[TICR]重复计数，然后发出一个中断
+	// 如果更关心精确计时，TICR将使用外部时间源进行校准.
 	lapicw(TDCR, X1);
 	lapicw(TIMER, PERIODIC | (IRQ_OFFSET + IRQ_TIMER));
 	lapicw(TICR, 10000000);
 
-	// Leave LINT0 of the BSP enabled so that it can get
-	// interrupts from the 8259A chip.
+	// 保持 BSP 的 LINT0 置位，以便它可以从 8259A 芯片获得中断.
 	//
-	// According to Intel MP Specification, the BIOS should initialize
-	// BSP's local APIC in Virtual Wire Mode, in which 8259A's
-	// INTR is virtually connected to BSP's LINTIN0. In this mode,
-	// we do not need to program the IOAPIC.
+	// 根据 Intel MP 规范，BIOS 应该在虚拟线模式下初始化 BSP 的本地 APIC，在这种模式下，8259A 的 INTR 实际上连接到 BSP 的 LINTIN0
+	// 在这种模式下，我们不需要对 IOAPIC 进行编程.
 	if (thiscpu != bootcpu)
 		lapicw(LINT0, MASKED);
 
-	// Disable NMI (LINT1) on all CPUs
+	// 在所有 CPU 上禁用 NMI (LINT1)
 	lapicw(LINT1, MASKED);
 
-	// Disable performance counter overflow interrupts
-	// on machines that provide that interrupt entry.
+	// 在提供该中断入口的机器上禁用性能计数器溢出中断.
 	if (((lapic[VER] >> 16) & 0xFF) >= 4)
 		lapicw(PCINT, MASKED);
 
-	// Map error interrupt to IRQ_ERROR.
+	// 将错误中断映射到 IRQ_ERROR.
 	lapicw(ERROR, IRQ_OFFSET + IRQ_ERROR);
 
-	// Clear error status register (requires back-to-back writes).
+	// 清除错误状态寄存器(需要反向写入).
 	lapicw(ESR, 0);
 	lapicw(ESR, 0);
 
-	// Ack any outstanding interrupts.
+	// 确认所有未完成的中断.
 	lapicw(EOI, 0);
 
-	// Send an Init Level De-Assert to synchronize arbitration ID's.
+	// 发送Init Level De-Assert 同步仲裁 ID.
 	lapicw(ICRHI, 0);
 	lapicw(ICRLO, BCAST | INIT | LEVEL);
 	while (lapic[ICRLO] & DELIVS)
 		;
 
-	// Enable interrupts on the APIC (but not on the processor).
+	// 在 APIC 上启用中断(但不在处理器上).
 	lapicw(TPR, 0);
 }
 
@@ -118,7 +117,7 @@ int cpunum(void)
 	return 0;
 }
 
-// Acknowledge interrupt.
+// 中断应答.
 void lapic_eoi(void)
 {
 	if (lapic)

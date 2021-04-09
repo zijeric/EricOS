@@ -211,4 +211,3 @@ void monitor(struct Trapframe *tf)
 				break;
 	}
 }
-

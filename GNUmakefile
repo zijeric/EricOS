@@ -94,7 +94,7 @@ include user/Makefrag
 include fs/Makefrag
 
 
-CPUS ?= 1
+CPUS ?= 3
 
 # 配置内核内存大小，限制为256MB
 QEMUOPTS = -m 256 -hda $(OBJDIR)/kern/kernel.img -serial mon:stdio -gdb tcp::$(GDBPORT)
@@ -117,21 +117,12 @@ qemu: $(IMAGES) pre-qemu
 	$(QEMU) $(QEMUOPTS)
 
 qemu-nox: $(IMAGES) pre-qemu
-	@echo "***"
-	@echo "*** Use Ctrl-a x to exit qemu"
-	@echo "***"
 	$(QEMU) -nographic $(QEMUOPTS)
 
 qemu-gdb: $(IMAGES) pre-qemu
-	@echo "***"
-	@echo "*** Now run 'gdb'." 1>&2
-	@echo "***"
 	$(QEMU) $(QEMUOPTS) -S
 
 qemu-nox-gdb: $(IMAGES) pre-qemu
-	@echo "***"
-	@echo "*** Now run 'gdb'." 1>&2
-	@echo "***"
 	$(QEMU) -nographic $(QEMUOPTS) -S
 
 print-qemu:
@@ -145,8 +136,7 @@ clean:
 	rm -rf $(OBJDIR) .gdbinit alvos.in qemu.log
 
 realclean: clean
-	rm -rf lab$(LAB).tar.gz \
-		alvos.out $(wildcard alvos.out.*) \
+	rm -rf alvos.out $(wildcard alvos.out.*) \
 		qemu.pcap $(wildcard qemu.pcap.*)
 
 distclean: realclean
@@ -155,41 +145,6 @@ distclean: realclean
 ifneq ($(V),@)
 GRADEFLAGS += -v
 endif
-
-grade:
-	@echo $(MAKE) clean
-	@$(MAKE) clean || \
-	  (echo "'make clean' failed.  HINT: Do you have another running instance of AlvOS?" && exit 1)
-	./grade-lab$(LAB) $(GRADEFLAGS)
-
-handin: realclean
-	@if [ `git status --porcelain| wc -l` != 0 ] ; then echo "\n\n\n\n\t\tWARNING: YOU HAVE UNCOMMITTED CHANGES\n\n    Consider committing any pending changes and rerunning make handin.\n\n\n\n"; fi
-	git tag -f -a lab$(LAB)-handin -m "Lab$(LAB) Handin"
-	git push --tags handin
-
-handin-check:
-	@if test "$$(git symbolic-ref HEAD)" != refs/heads/lab$(LAB); then \
-		git branch; \
-		read -p "You are not on the lab$(LAB) branch.  Hand-in the current branch? [y/N] " r; \
-		test "$$r" = y; \
-	fi
-	@if ! git diff-files --quiet || ! git diff-index --quiet --cached HEAD; then \
-		git status; \
-		echo; \
-		echo "You have uncomitted changes.  Please commit or stash them."; \
-		false; \
-	fi
-	@if test -n "`git ls-files -o --exclude-standard`"; then \
-		git status; \
-		read -p "Untracked files will not be handed in.  Continue? [y/N] " r; \
-		test "$$r" = y; \
-	fi
-
-tarball: handin-check
-	git archive --format=tar HEAD | gzip > lab$(LAB)-handin.tar.gz
-
-handin-prep:
-	@./handin-prep
 
 # For test runs
 
@@ -219,4 +174,4 @@ always:
 	@:
 
 .PHONY: all always \
-	tarball clean realclean distclean grade handin-prep handin-check
+	clean realclean distclean
