@@ -1,0 +1,222 @@
++ ld obj/kern/kernel
++ mk obj/kern/kernel.img
+
+e820 MEMORY MAP
+size: 20, physical address: 0x0000000000000000, length: 0x000000000009fc00, type: reserved
+size: 20, physical address: 0x000000000009fc00, length: 0x0000000000000400, type: availiable
+size: 20, physical address: 0x00000000000f0000, length: 0x0000000000010000, type: availiable
+size: 20, physical address: 0x0000000000100000, length: 0x000000000fee0000, type: reserved
+size: 20, physical address: 0x000000000ffe0000, length: 0x0000000000020000, type: availiable
+size: 20, physical address: 0x00000000fffc0000, length: 0x0000000000040000, type: availiable
+
+Physical memory: 256M available, base = 636K, extended = 261120K
+Using only 261120K of the available memory, npages = 65280.
+x64_vm_init: allocate memory for pml4e.
+boot_alloc: 
+ newSize: 0x1000 
+ end of newSize: 0x80046f2000 
+ end of usable Mem: 0x8013efd000 
+ AlvOS kernel va(0x100000): 0x8004100000 
+ mapping base pa(KERNBASE): 0x0 
+x64_vm_init: allocate memory for pages[65280].
+boot_alloc: 
+ newSize: 0xff000 
+ end of newSize: 0x80047f1000 
+ end of usable Mem: 0x8013efd000 
+ AlvOS kernel va(0x100000): 0x8004100000 
+ mapping base pa(KERNBASE): 0x0 
+x64_vm_init: allocate memory for envs[1024].
+boot_alloc: 
+ newSize: 0x48000 
+ end of newSize: 0x8004839000 
+ end of usable Mem: 0x8013efd000 
+ AlvOS kernel va(0x100000): 0x8004100000 
+ mapping base pa(KERNBASE): 0x0 
+pg_size: 0xff000
+env_size: 0x48000
+KSTKSIZE: 0x10000
+kern_size: 0xff00000
+check_boot_pml4e() succeeded!
+check_page_alloc() succeeded!
+check privilege success 8003c03000 ffffffffffffffff
+check_page() succeeded!
+SMP: CPU 0 found 3 CPU(s)
+enabled interrupts: 1 2 4
+SMP: CPU 1 starting
+SMP: CPU 2 starting
+FS is running
+FS can do I/O
+Device 1 presence: 1
+superblock is good
+file_open is good
+file_get_block is good
+2
+3
+5
+7
+11
+13
+17
+19
+23
+29
+31
+37
+41
+43
+47
+53
+59
+61
+67
+71
+73
+79
+83
+89
+97
+101
+103
+107
+109
+113
+127
+131
+137
+139
+149
+151
+157
+163
+167
+173
+179
+181
+191
+193
+197
+199
+211
+223
+227
+229
+233
+239
+241
+251
+257
+263
+269
+271
+277
+281
+283
+293
+307
+311
+313
+317
+331
+337
+347
+349
+353
+359
+367
+373
+379
+383
+389
+397
+401
+409
+419
+421
+431
+433
+439
+443
+449
+457
+461
+463
+467
+479
+487
+491
+499
+503
+509
+521
+523
+541
+547
+557
+563
+569
+571
+577
+587
+593
+599
+601
+607
+613
+617
+619
+631
+641
+643
+647
+653
+659
+661
+673
+677
+683
+691
+701
+709
+719
+727
+733
+739
+743
+751
+757
+761
+769
+773
+787
+797
+809
+811
+821
+823
+827
+829
+839
+853
+857
+859
+863
+877
+881
+883
+887
+907
+911
+919
+929
+937
+941
+947
+953
+967
+971
+977
+983
+991
+997
+1009
+qemu: terminating on signal 15 from pid 10781
