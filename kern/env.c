@@ -151,16 +151,14 @@ void env_init_percpu(void)
 	lldt(0);
 }
 
-//
-// Initialize the kernel virtual memory layout for environment e.
-// Allocate a page map level 4, set e->env_pml4e accordingly,
-// and initialize the kernel portion of the new environment's address space.
-// Do NOT (yet) map anything into the user portion
-// of the environment's virtual address space.
-//
-// Returns 0 on success, < 0 on error.  Errors include:
-//	-E_NO_MEM if page directory or table could not be allocated.
-//
+/**
+ * 为一个新环境 e 分配一个4级页表，并初始化新环境的地址空间的内核部分
+ * 参数：struct Env *e: ENV 结构指针
+ * 返回值：0: 成功，-E_NO_MEM: 失败，没有足够物理内存分配
+ * 
+ * 相应设置e->env_pml4e，初始化用户环境虚拟地址的内核部分
+ * 目前不要将任何东西映射到用户环境虚拟地址的用户部分
+ */
 static int
 env_setup_vm(struct Env *e)
 {
@@ -267,7 +265,7 @@ int env_alloc(struct Env **newenv_store, envid_t parent_id)
 	env_free_list = e->env_link;
 	*newenv_store = e;
 
-	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+	// cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 	return 0;
 }
 
@@ -384,7 +382,7 @@ void load_icode(struct Env *e, uint8_t *binary)
 }
 
 /**
- * 为参数binary创建用户环境虚拟地址空间，并且将其载入到相应的虚拟地址上
+ * 为参数 binary 创建用户环境虚拟地址空间，并且将其载入到相应的虚拟地址上
  * 参数：
  * binary: 用户环境所在地址(va), type: 用户环境类型，一般为 ENV_TYPE_USER
  * 函数功能：
@@ -533,26 +531,26 @@ void env_pop_tf(struct Trapframe *tf)
 	curenv->env_cpunum = cpunum();
 
 	__asm __volatile(
-					 /* 占位符 %0 由"g"(tf)定义，代表参数tf，即Trapframe的指针地址 */
-					 /* 指令代表esp指向参数(Trapframe*)tf开始位置 */
-					 "movq %0,%%rsp\n"
-					 /* 将存储 struct PushRegs 的寄存器数值放回寄存器 */
-					 POPA
-					 /* 恢复 %es, %ds 段寄存器 */
-					 "movw (%%rsp),%%es\n"
-					 "movw 8(%%rsp),%%ds\n"
-					 "addq $16,%%rsp\n"
-					 /* 跳过 tf_trapno, tf_errcode */
-					 "\taddq $16,%%rsp\n"
-					 /* iret之后发生权限级的改变(即由内核态切换到用户态)，所以iret会依次弹出5个寄存器
+		/* 占位符 %0 由"g"(tf)定义，代表参数tf，即Trapframe的指针地址 */
+		/* 指令代表esp指向参数(Trapframe*)tf开始位置 */
+		"movq %0,%%rsp\n"
+		/* 将存储 struct PushRegs 的寄存器数值放回寄存器 */
+		POPA
+		/* 恢复 %es, %ds 段寄存器 */
+		"movw (%%rsp),%%es\n"
+		"movw 8(%%rsp),%%ds\n"
+		"addq $16,%%rsp\n"
+		/* 跳过 tf_trapno, tf_errcode */
+		"\taddq $16,%%rsp\n"
+		/* iret之后发生权限级的改变(即由内核态切换到用户态)，所以iret会依次弹出5个寄存器
 					 (rip、cs、rflags、rsp、ss) */
-					 "\tiretq"
-					 /* 这些寄存器在env_alloc(), load_icode()中都已赋值，iret后，rip就指向了程序的入口地址，
+		"\tiretq"
+		/* 这些寄存器在env_alloc(), load_icode()中都已赋值，iret后，rip就指向了程序的入口地址，
 					 cs也由内核代码段转向了用户代码段，rsp也由内核栈转到了用户栈 */
-					 :
-					 /* g 是通用传递约束(寄存器、内存、立即数)，此处表示使用内存 */
-					 : "g"(tf)
-					 : "memory");
+		:
+		/* g 是通用传递约束(寄存器、内存、立即数)，此处表示使用内存 */
+		: "g"(tf)
+		: "memory");
 	// 错误处理
 	panic("iret failed");
 }
@@ -579,7 +577,7 @@ void env_run(struct Env *e)
 	 * 注意，这个函数从e->env_tf加载新环境的状态，确保您已经将e->env_tf的相关部分设置为合理的值
 	 */
 
-		// 1.如果当前运行的环境(curenv)是正在运行(ENV_RUNNING)，上下文切换，更新状态为等待运行(ENV_RUNNABLE)
+	// 1.如果当前运行的环境(curenv)是正在运行(ENV_RUNNING)，上下文切换，更新状态为等待运行(ENV_RUNNABLE)
 	if (curenv && curenv->env_status == ENV_RUNNING)
 	{
 		curenv->env_status = ENV_RUNNABLE;

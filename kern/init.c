@@ -50,7 +50,7 @@ void i386_init(void)
 	/**
 	 * BSP 调用mem_init()，主要创建页目录、pages数组、envs数组、映射pages数组/envs数组/BSP内核栈等到4级页表中
 	 * mem_init()	// 初始化内存管理
-	 * - i386_detect_memory()	// 通过 BIOS e820/调用硬件检测可以使用的内存大小
+	 * - i386_detect_memory()	// 通过 BIOS e820h调用硬件检测可以使用的内存大小
 	 * - boot_alloc()	// 页表映射尚未构建时的内存分配器 -> boot_pml4e, pages[](大小由探测决定), envs[](NENV)
 	 * - page_init()	// 初始化 pages[] 中的物理页(避免映射已使用的物理内存)，建立 page_free_list 链表从而使用page分配器 page_alloc(), page_free()
 	 *   - boot_alloc(0)	// 获取内核后第一个空闲的物理地址空间(页对齐)
@@ -90,9 +90,9 @@ void i386_init(void)
 
 	/**
 	 * lapic_init() + mp_init() -> x86 多CPU初始化
-	 * mp_init() 函数通过调用 mpconfig() 从BIOS中读取浮动指针mp，从mp中找到struct mpconf多处理器配置表，
-	 * 然后根据这个结构体内的entries信息（processor table entry）对各个cpu结构体进行配置（主要是cpuid）
-	 * 如果proc->flag是MPPROC_BOOT，说明这个入口对应的处理器是用于启动的处理器，把结构体数组cpus[ncpu]地址赋值给bootcpu指针
+	 * mp_init() 通过调用 mpconfig() 从BIOS中读取浮动指针 mp，从 mp 中找到 struct mpconf 多处理器配置表
+	 * 然后根据这个结构体内的 entries 信息（processor table entry）对各个cpu结构体进行配置（主要是cpuid）
+	 * 如果 proc->flag 是 MPPROC_BOOT，说明这个入口对应的处理器是用于启动的处理器，把结构体数组cpus[ncpu]地址赋值给bootcpu指针
 	 * 注意这里ncpu是个全局变量，那么这里实质上就是把cpus数组的第一个元素的地址给了bootcpu
 	 * 如果出现任何entries匹配错误，则认为处理器的初始化失败了，不能用多核处理器进行机器的运行
 	 */
@@ -107,11 +107,13 @@ void i386_init(void)
 	 */
 	lapic_init();
 
-	// 多任务初始化函数，初始化8259A中断控制器，允许生成中断
+	/**
+	 * 多任务初始化函数，初始化8259A中断控制器，允许生成中断
+	 */
 	pic_init();
 
 	/**
-	 * BSP 调用 lock_kernel()唤醒 APs 之前，获取大内核锁
+	 * BSP 调用 lock_kernel() 唤醒 APs 之前，获取大内核锁
 	 * lock_kernel()			// 将 大内核锁(单个的全局锁) 作为参数调用
 	 * - spin_lock()			// 获取锁(xchg 原子性操作)；循环(自旋)，直到获得锁
 	 */
