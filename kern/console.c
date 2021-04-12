@@ -76,29 +76,28 @@ serial_putc(int c)
 static void
 serial_init(void)
 {
-	// Turn off the FIFO
+	// 关闭 FIFO
 	outb(COM1 + COM_FCR, 0);
 
-	// Set speed; requires DLAB latch
+	// 设定速度；需要 DLAB 锁
 	outb(COM1 + COM_LCR, COM_LCR_DLAB);
 	outb(COM1 + COM_DLL, (uint8_t)(115200 / 9600));
 	outb(COM1 + COM_DLM, 0);
 
-	// 8 data bits, 1 stop bit, parity off; turn off DLAB latch
+	// 8数据位，1停止位，奇偶校验关闭; 关闭 DLAB 锁存器
 	outb(COM1 + COM_LCR, COM_LCR_WLEN8 & ~COM_LCR_DLAB);
 
-	// No modem controls
+	// 无调制解调器控制
 	outb(COM1 + COM_MCR, 0);
-	// Enable rcv interrupts
+	// 启用 rcv 中断
 	outb(COM1 + COM_IER, COM_IER_RDI);
 
-	// Clear any preexisting overrun indications and interrupts
-	// Serial port doesn't exist if COM_LSR returns 0xFF
+	// 如果 COM_LSR 返回0xFF，则清除任何预先存在的溢出指示和中断串行端口不存在
 	serial_exists = (inb(COM1 + COM_LSR) != 0xFF);
 	(void)inb(COM1 + COM_IIR);
 	(void)inb(COM1 + COM_RX);
 
-	// Enable serial interrupts
+	// 启用串行中断
 	if (serial_exists)
 		irq_setmask_8259A(irq_mask_8259A & ~(1 << 4));
 }
@@ -148,7 +147,7 @@ cga_init(void)
 		addr_6845 = CGA_BASE;
 	}
 
-	/* Extract cursor location */
+	/* 提取指针位置 */
 	outb(addr_6845, 14);
 	pos = inb(addr_6845 + 1) << 8;
 	outb(addr_6845, 15);
@@ -388,8 +387,9 @@ void kbd_intr(void)
 static void
 kbd_init(void)
 {
-	// Drain the kbd buffer so that Bochs generates interrupts.
+	// 清空kbd缓冲区，使 QEMU 产生中断.
 	kbd_intr();
+	// 设置 8295A 的 IRQ 掩码
 	irq_setmask_8259A(irq_mask_8259A & ~(1 << 1));
 }
 
@@ -455,10 +455,11 @@ cons_putc(int c)
 	cga_putc(c);
 }
 
-// initialize the console devices
+// 初始化控制台设备
 void cons_init(void)
 {
 	cga_init();
+	// 清空kbd缓冲区，使 QEMU 产生中断.
 	kbd_init();
 	serial_init();
 

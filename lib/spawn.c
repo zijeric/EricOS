@@ -303,7 +303,6 @@ map_segment(envid_t child, uintptr_t va, size_t memsz,
 static int
 copy_shared_pages(envid_t child)
 {
-	// LAB 5: Your code here.
 	int r = 0;
 	uint64_t pml;
 	uint64_t pdpe;

@@ -71,8 +71,7 @@ typedef struct module
     uint32_t reserved;
 } module_t;
 
-/* The memory map. Be careful that the offset 0 is base_addr_low
-    but no size. */
+/* 内存映射. 请注意，偏移量0是base_addr_low，但没有大小. */
 typedef struct memory_map
 {
     uint32_t size;

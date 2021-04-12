@@ -78,7 +78,8 @@ void lapic_init(void)
 
 	// 保持 BSP 的 LINT0 置位，以便它可以从 8259A 芯片获得中断.
 	//
-	// 根据 Intel MP 规范，BIOS 应该在虚拟线模式下初始化 BSP 的本地 APIC，在这种模式下，8259A 的 INTR 实际上连接到 BSP 的 LINTIN0
+	// 根据 Intel MP 规范[MP Specification]，BIOS 应该在 Virtual Wire 模式初始化 BSP 的 Local APIC
+	// 其中 8259A 的 INTR 实际上连接到 BSP 的 LINTIN0
 	// 在这种模式下，我们不需要对 IOAPIC 进行编程.
 	if (thiscpu != bootcpu)
 		lapicw(LINT0, MASKED);

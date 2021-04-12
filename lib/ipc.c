@@ -46,8 +46,6 @@ ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 		*perm_store = thisenv->env_ipc_perm;
 	}
 	return thisenv->env_ipc_value;
-	// LAB 4: Your code here.
-	//panic("ipc_recv not implemented");
 }
 
 // Send 'val' (and 'pg' with 'perm', if 'pg' is nonnull) to 'toenv'.
@@ -77,8 +75,6 @@ void ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 	{
 		panic("something went wrong with sending the page");
 	}
-	// LAB 4: Your code here.
-	//panic("ipc_send not implemented");
 }
 
 // Find the first environment of the given type.  We'll use this to

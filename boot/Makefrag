@@ -17,7 +17,7 @@ $(OBJDIR)/boot/%.o: boot/%.S
 	@mkdir -p $(@D)
 	$(V)$(CC) -nostdinc $(BOOT_CFLAGS) -c -o $@ $<
 
-# 将链接完成的 bootloader 加载到内核物理地址 0x7c00(BIOS 交接 CPU 控制权的地址)
+# 将链接完成的 bootloader 的代码段标记为物理地址 0x7c00(BIOS 交接 CPU 控制权的地址)
 $(OBJDIR)/boot/boot: $(BOOT_OBJS)
 	@echo + ld $(OBJDIR)/boot/boot
 	$(V)$(LD) $(BOOT_LDFLAGS) -N -e start -Ttext 0x7c00 -o $@.out $^

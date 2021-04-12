@@ -69,7 +69,6 @@ int open(const char *path, int mode)
 	// Return the file descriptor index.
 	// If any step after fd_alloc fails, use fd_close to free the
 	// file descriptor.
-	// LAB 5: Your code here
 	struct Fd *new_fd;
 	int r = fd_alloc(&new_fd);
 	if (r < 0)
@@ -116,8 +115,6 @@ devfile_read(struct Fd *fd, void *buf, size_t n)
 	// filling fsipcbuf.read with the request arguments.  The
 	// bytes read will be written back to fsipcbuf by the file
 	// system server.
-	// LAB 5: Your code here
-	// panic("devfile_read not implemented");
 	fsipcbuf.read.req_fileid = fd->fd_file.id;
 	fsipcbuf.read.req_n = n;
 	ssize_t nbytes = fsipc(FSREQ_READ, NULL);

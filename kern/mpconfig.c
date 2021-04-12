@@ -120,21 +120,20 @@ mpsearch(void)
 	uint32_t p;
 	struct mp *mp;
 
-	// The BIOS data area lives in 16-bit segment 0x40.
+	// BIOS 的数据区域位于16位段0x40中.
 	bda = (uint8_t *)KADDR(0x40 << 4);
 
-	// [MP 4] The 16-bit segment of the EBDA is in the two bytes
-	// starting at byte 0x0E of the BDA.  0 if not present.
+	// [MP 4] EBDA 的16位段以从 BDA 字节0x0E开始的两个字节为单位
+	// 如果不存在则为0.
 	if ((p = *(uint16_t *)(bda + 0x0E)))
 	{
-		p <<= 4; // Translate from segment to PA
+		p <<= 4; // 从段翻译成物理地址 PA
 		if ((mp = mpsearch1(p, 1024)))
 			return mp;
 	}
 	else
 	{
-		// The size of base memory, in KB is in the two bytes
-		// starting at 0x13 of the BDA.
+		// 基本内存的大小(以 KB 为单位)是从 BDA 的0x13开始的两个字节.
 		p = *(uint16_t *)(bda + 0x13) * 1024;
 		if ((mp = mpsearch1(p - 1024, 1024)))
 			return mp;
