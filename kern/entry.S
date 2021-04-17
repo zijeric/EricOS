@@ -72,7 +72,7 @@ relocated:
 	movabs	$(bootstacktop), %rax
 	movq  %rax, %rsp
 
-	# 间接调用函数 i386_init() 
+	# 间接调用函数 i386_init()
     movabs $i386_init, %rax
 	call *%rax
 
@@ -87,7 +87,7 @@ spin:	jmp	spin
 	.p2align	PGSHIFT		# 强制页对齐
 	.globl		bootstack
 bootstack:
-	.space		KSTKSIZE    # 从此处地址开始的 KSTKSIZE:32KB(inc/memlayout.h) 字节的区域都属于临时内核栈
+	.space		KSTKSIZE    # 从此处地址开始的 KSTKSIZE:64KB 字节的区域都属于内核栈
 	.globl		bootstacktop   
 bootstacktop:
 

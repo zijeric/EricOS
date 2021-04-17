@@ -60,7 +60,7 @@ void lapic_init(void)
 
 	// lapicaddr 是 LAPIC 的 4KB MMIO 区域的物理地址
 	// 为了可以访问它，把它映射到虚拟内存中.
-	lapic = mmio_map_region(lapicaddr, 4096);
+	lapic = mmio_map_region(lapicaddr, PGSIZE);
 
 	// Enable local APIC; set spurious interrupt vector.
 	lapicw(SVR, ENABLE | (IRQ_OFFSET + IRQ_SPURIOUS));

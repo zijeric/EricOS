@@ -14,20 +14,20 @@
  */
 struct Elf
 {
-	uint32_t e_magic;	  // 标识文件是否为 ELF 文件，与 Linux 不同，魔数不在数组中
+	uint32_t e_magic;	  // 魔数，标识文件是否为 ELF 文件
 	uint8_t e_elf[12];	  // 其他相关信息
 	uint16_t e_type;	  // 文件类型
-	uint16_t e_machine;	  // 针对体系结构
+	uint16_t e_machine;	  // 体系结构
 	uint32_t e_version;	  // 版本信息
 	uint64_t e_entry;	  // ***entry point 程序入口点
-	uint64_t e_phoff;	  // ***程序头表偏移量
-	uint64_t e_shoff;	  // ***节头表偏移量
+	uint64_t e_phoff;	  // ***程序头表的第一项相对于ELF文件的开始位置的偏移
+	uint64_t e_shoff;	  // ***节头表的第一项相对于ELF文件的开始位置的偏移
 	uint32_t e_flags;	  // 处理器特定标志
 	uint16_t e_ehsize;	  // 文件头长度
 	uint16_t e_phentsize; // 程序头部长度
-	uint16_t e_phnum;	  // ***程序头部个数
+	uint16_t e_phnum;	  // ***程序头表项的个数
 	uint16_t e_shentsize; // 节头部长度
-	uint16_t e_shnum;	  // ***节头部个数
+	uint16_t e_shnum;	  // ***节头表项的个数
 	uint16_t e_shstrndx;  // 节头部字符索引
 };
 

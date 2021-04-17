@@ -99,7 +99,7 @@
 #define CR0_ET 0x00000010 // Extension Type
 #define CR0_NE 0x00000020 // Numeric Error
 #define CR0_WP 0x00010000 // 写保护位
-#define CR0_AM 0x00040000 // Alignment Mask
+#define CR0_AM 0x00040000 // Alignment 掩码
 #define CR0_NW 0x20000000 // Not Writethrough
 #define CR0_CD 0x40000000 // 禁用 Cache
 #define CR0_PG 0x80000000 // 分页位
@@ -112,7 +112,7 @@
 #define CR4_PVI 0x00000002 // Protected-Mode Virtual Interrupts
 #define CR4_VME 0x00000001 // V86 Mode Extensions
 
-// x86_64 的变化
+// x64 的变化
 #define CR4_PAE 0x00000020
 #define EFER_MSR 0xC0000080
 #define EFER_LME 8
@@ -177,8 +177,8 @@
 
 #include "inc/types.h"
 
-	// Segment Descriptors
-	struct Segdesc
+// Segment Descriptors
+struct Segdesc
 {
 	unsigned sd_lim_15_0 : 16;	// Low bits of segment limit
 	unsigned sd_base_15_0 : 16; // Low bits of segment base address

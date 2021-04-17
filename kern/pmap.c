@@ -26,9 +26,9 @@ size_t npages;				  // 物理内存量(以页为单位)
 static size_t npages_basemem; // 基本内存量(以页为单位)
 
 // 通过 x86_vm_init() 对 boot_pml4e, boot_cr3, pages, page_free_lists 赋值
-// 由内核初始化的第4级页表(boot)
+// 由内核初始化的4级页表
 pml4e_t *boot_pml4e;
-// boot 阶段的 pml4 物理地址
+// 存储到CR3寄存器的 pml4 物理地址
 physaddr_t boot_cr3;
 // 所有 PageInfo 在物理内存连续存放于 pages 处，可以通过数组的形式访问各个 PageInfo，
 // 而 pages 紧接于 boot_pml4e 页表之上，kernel 向上的高地址部分连续分布着 pages 数组
@@ -204,16 +204,16 @@ i386_detect_memory(void)
 		// (16-bit)
 		npages = npages_basemem;
 
-	cprintf("Physical memory: %uM available, base = %uK, extended = %uK\n",
+	cprintf("Physical memory: %uM available, base = %uK, extended = %uM\n",
 			npages * PGSIZE / (1024 * 1024),
 			npages_basemem * PGSIZE / 1024,
-			npages_extmem * PGSIZE / 1024);
+			npages_extmem * PGSIZE / 1024 / 1024);
 
 	// AlvOS 的物理内存硬件是固定的，只支持 256MB 的物理内存
 	if (npages > ((255 * 1024 * 1024) / PGSIZE))
 	{
 		npages = (255 * 1024 * 1024) / PGSIZE;
-		cprintf("Using only %uK of the available memory, npages = %d.\n", npages * PGSIZE / 1024, npages);
+		cprintf("Using only %uM of the available memory, npages = %d.\n", npages * PGSIZE / 1024 / 1024, npages);
 	}
 }
 
@@ -228,7 +228,6 @@ static void check_page_alloc(void);
 static void check_boot_pml4e(pml4e_t *pml4e);
 static physaddr_t check_va2pa(pde_t *pgdir, uintptr_t va);
 static void page_check(void);
-static void page_initpp(struct PageInfo *pp);
 
 /**
  * 为了分配 pml4, pages[], envs[] 物理内存空间，需要一个临时的简单物理内存分配器
@@ -240,7 +239,7 @@ static void page_initpp(struct PageInfo *pp);
  * 如果内存不足，boot_alloc 会崩溃而调用panic()
  * 这也是为什么 boot_alloc 要检查是否分配了超过 va(0xfefd000) 的原因 boot_alloc 函数只用来分配：
  *  1.boot_pml4e: PGSIZE 4KB
- * (64-bit CPU 抽象成4级页表的原因就是为了通过一个顶级页表(CR3)以及页映射(MMU)能访问所有的对应于任一物理内存的物理页帧)
+ * (64-bit CPU 抽象成4级页表的原因就是为了通过一个顶级页表(CR3)以及分页硬件(MMU)能访问所有的对应于任一物理内存的物理页帧)
  *  2.pages[65280]: 255*4KB=1020KB (0xff000)
  *  3.envs[NENV]: 72*4KB=288KB (0x48000)
  */
@@ -268,13 +267,14 @@ boot_alloc(uint32_t n)
 	if (n > 0)
 	{
 		uint32_t newSize = ROUNDUP(n, PGSIZE);
-		cprintf("boot_alloc: \n newSize: %p \n end of newSize: %p \n end of usable Mem: %p \n AlvOS kernel va(0x100000): %p \n mapping base pa(KERNBASE): %p \n",
-				newSize, nextfree + newSize, KADDR(0xfefd000), KADDR(0x100000), PADDR(KERNBASE));
-		// 处理 PC 内存不足的情况：KADDR(0xfefd000) -- e820映射给出的内核可用地址空间的最后一个地址.
+		cprintf("boot_alloc: \n newSize: %p \n end of newSize: %p \n end of usable Mem: %p \n AlvOS bootstrap va(0x100000): %p \n AlvOS kernel va(0x200000): %p \n mapping base pa(KERNBASE): %p \n",
+				newSize, nextfree + newSize, KADDR(0xfefd000), KADDR(0x200000), PADDR(KERNBASE));
+		// 处理 PC 内存不足的情况：KADDR(0xfefd000) -- 受限于256MB，e820映射给出的内核可用地址空间的最后一个地址.
 		//last address of the usable address space that the e820 map gives.
 		if (nextfree + newSize > (char *)KADDR(0xfefd000))
 			panic("No memory available in boot_alloc");
 		nextfree = nextfree + newSize;
+		cprintf("boot_alloc:\n next_free: %p\n");
 	}
 	return result;
 }
@@ -314,7 +314,7 @@ void x64_vm_init(void)
 
 	// 1.通过 multiboot/硬件 查看可以使用的内存大小 (底层 kern/kclock.c)
 	// 赋值全局变量 npages(总内存量所需的页表个数) 和 npages_basemem(基础内存量所需页表个数)，用于计算 PageInfo 个数
-	// base memory: [0, 0xA0000), BIOS: [0xA0000, 0x100000), extmem: [0x100000, 0x10000000)
+	// base memory: [0x1000, 0xA0000), BIOS: [0xA0000, 0x100000), extmem: [0x100000, 0x10000000)
 	i386_detect_memory();
 
 	//////////////////////////////////////////////////////////////////////
@@ -431,6 +431,7 @@ void x64_vm_init(void)
 	// boot_cr3 在KERNBASE以上区间的映射包含了 pml4virt，且管理了pages, envs, kern_stack
 	// MMU 分页硬件在进行页式地址转换时会自动地从 CR3 中取得4级页表地址
 	lcr3(boot_cr3);
+	cprintf("boot_cr3: %p\n",boot_cr3);
 
 	// pdpe_t *pdpe = KADDR(PTE_ADDR(pml4e[1]));
 	// pde_t *pgdir = KADDR(PTE_ADDR(pdpe[0]));
@@ -590,17 +591,6 @@ page_alloc(int alloc_flags)
 	}
 	// 空闲内存不足，返回 NULL
 	return NULL;
-}
-
-//
-// Initialize a Page structure.
-// The result has null links and 0 refcount.
-// Note that the corresponding physical page is NOT initialized!
-//
-static void
-page_initpp(struct PageInfo *pp)
-{
-	memset(pp, 0, sizeof(*pp));
 }
 
 /**
@@ -831,7 +821,7 @@ boot_map_region(pml4e_t *pml4e, uintptr_t la, size_t size, physaddr_t pa, int pe
 		pt_entry = pml4e_walk(pml4e, (void *)(la + i), ALLOC_ZERO);
 		if (pt_entry)
 		{
-			// 为了设置参数 la 对应的页表项 PTE，并授予的权限，清空权限位(low 12-bit)
+			// 为了设置参数 la 对应的页表项 PTE，并授予的权限，清空权限位(低12-bit)
 			*pt_entry = PTE_ADDR(pa + i);
 			// (pa+i) 是页对齐的(4096=2^12)，所以低12位为空，与 PTE_P 和 perm 或运算设置权限
 			*pt_entry |= perm | PTE_P;
@@ -906,7 +896,7 @@ page_lookup(pml4e_t *pml4e, void *va, pte_t **pte_store)
 		// 	将 pte_store 指向页表项的虚拟地址 pte
 		if (pte_store)
 			*pte_store = pt_entry;
-		// 由 pt 接收给定虚拟地址 va 对应页表项的PPN索引(20-bit 清除权限设置)
+		// 由 pt 接收给定虚拟地址 va 对应页表项的PPN索引(12-bit 清除权限设置)
 		physaddr_t pt = PTE_ADDR(*pt_entry);
 		// 返回物理页帧结构地址(虚拟地址)
 		return pa2page(pt);
@@ -946,11 +936,11 @@ void page_remove(pml4e_t *pml4e, void *va)
 }
 
 /**
- * 使 TLB 条目无效，仅当正在修改的页表是CPU当前处理的页表时才使用
+ * 使 TLB 项无效，仅当正在修改的页表是CPU当前处理的页表时才使用
  */
 void tlb_invalidate(pml4e_t *pml4e, void *va)
 {
-	// Flush the entry only if we're modifying the current address space.
+	// 当正在修改当前pml4e地址空间时才刷新TLB项.
 	assert(pml4e != NULL);
 	if (!curenv || curenv->env_pml4e == pml4e)
 		invlpg(va);
@@ -1047,7 +1037,7 @@ void user_mem_assert(struct Env *env, const void *va, size_t len, int perm)
 	{
 		cprintf("[%08x] user_mem_check assertion failure for va %08x\n",
 				env->env_id, user_mem_check_addr);
-		 // 不返回
+		// 不返回
 		env_destroy(env);
 	}
 }

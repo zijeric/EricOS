@@ -143,7 +143,6 @@ void i386_init(void)
 	 *     - region_alloc()	// 为用户环境映射一页内存作为栈空间（USTACKTOP - PGSIZE）
 	 */
 	// Start fs.
-	// ENV_CREATE(user_testshell, ENV_TYPE_USER);
 	ENV_CREATE(fs_fs, ENV_TYPE_FS);
 
 #if defined(TEST)

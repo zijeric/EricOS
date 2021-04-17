@@ -1,4 +1,4 @@
-// test register restore on user-level page fault return
+// 测试当用户级页错误返回时，寄存器的恢复是否正常
 
 #include "inc/lib.h"
 

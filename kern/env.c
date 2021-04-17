@@ -49,10 +49,10 @@ struct Segdesc gdt[2 * NCPU + 5] = {
 	[GD_KD >> 3] = SEG64(STA_W, 0x0, 0xffffffff, 0),
 
 	// 0x18 - 用户代码段
-	[GD_UT >> 3] = SEG64(STA_X | STA_R, 0x0, 0xffffffff, 3),
+	[GD_UT >> 3] = SEG64(STA_X | STA_R, 0x0, 0xffffffff, DPL_USER),
 
 	// 0x20 - 用户数据段
-	[GD_UD >> 3] = SEG64(STA_W, 0x0, 0xffffffff, 3),
+	[GD_UD >> 3] = SEG64(STA_W, 0x0, 0xffffffff, DPL_USER),
 
 	// Per-CPU TSS 描述符 (从 GD_TSS0 开始计数) 在 trap_init_percpu() 中初始化.
 	// 0x28 - tss, 在 trap_init_percpu() 中初始化 Per-CPU 的 TSS 描述符(从 GD_TSS0 开始)
@@ -198,6 +198,7 @@ env_setup_vm(struct Env *e)
 	// 将 UVPT虚拟地址 对应在4级页表中的表项 设置成4级页表自己的物理地址
 	// 当用户环境访问4级页表，只要把对应的虚拟地址设置成 UVPT 即可
 	// 配置新环境4级页表的 UVPT 映射 env 自己的页表为只读，无法被用户篡改
+	// 也就是说，如果一个用户程序想访问页目录的话，只要把对应的虚拟地址设置成UVPT即可
 	// 权限: 内核 R-, 用户 R-
 	e->env_pml4e[PML4(UVPT)] = e->env_cr3 | PTE_P | PTE_U;
 

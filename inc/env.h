@@ -62,7 +62,7 @@ enum
 enum EnvType
 {
 	ENV_TYPE_USER = 0,
-	 // 文件系统服务器
+	// 文件系统服务器
 	ENV_TYPE_FS,
 };
 
@@ -137,7 +137,7 @@ struct Env
 	uint32_t env_ipc_value;
 
 	// 发送方负责设置该成员为自己的envid号
-	envid_t env_ipc_from;	// envid of the sender
+	envid_t env_ipc_from;
 
 	// 如果环境要接受消息，并且传送页，那么发送方发送页以后将传送的页权限传给这个成员.
 	int env_ipc_perm;
