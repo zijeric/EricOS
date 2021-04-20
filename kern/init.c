@@ -74,7 +74,7 @@ void i386_init(void)
 	x64_vm_init();
 
 	/**
-	 * BSP 调用 env_init()，初始化envs数组；同时调用 env_init_percpu() 加载当前cpu的 GDT 和 gs/fs/es/ds/ss 段描述符
+	 * BSP 调用 env_init()，初始化env_free_list；同时调用 env_init_percpu() 加载当前cpu的 GDT 和 gs/fs/es/ds/ss 段描述符
 	 * env_init()			// 初始化用户环境(envs[NENV], env_free_list逆序地包含所有的env)
 	 * - env_init_percpu()	// 加载可区分用户态、能处理int指令(TSS)的GDT，并初始化es, ds, ss(在用户态和内核态切换使用), cs(内核代码段)等寄存器
 	 */

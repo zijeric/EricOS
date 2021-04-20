@@ -342,8 +342,7 @@ struct Gatedesc
 // - off: 中断处理程序的代码段中的偏移量
 // - dpl: 描述符特权级别(DPL) -
 //    软件使用 int 指令显式调用该中断/陷阱门(interrupt/trap gate)所需的特权级别
-#define SETGATE(gate, istrap, sel, off, dpl)                        \
-	{                                                               \
+#define SETGATE(gate, istrap, sel, off, dpl) {                                                               \
 		(gate).gd_off_15_0 = (uint64_t)(off)&0xffff;                \
 		(gate).gd_ss = (sel);                                       \
 		(gate).gd_ist = 0;                                          \
@@ -355,7 +354,7 @@ struct Gatedesc
 		(gate).gd_off_31_16 = ((uint64_t)(off) >> 16) & 0xffff;     \
 		(gate).gd_off_32_63 = ((uint64_t)(off) >> 32) & 0xffffffff; \
 		(gate).gd_rsv2 = 0;                                         \
-	}
+}
 
 // 构造调用门描述符(call gate descriptor).
 #define SETCALLGATE(gate, ss, off, dpl)                             \

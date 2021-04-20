@@ -290,7 +290,6 @@ void print_regs(struct PushRegs *regs)
 	cprintf("  rax  0x%08x\n", regs->reg_rax);
 }
 
-
 /**
  * 处理环境产生的异常(分发异常到对应的处理函数).
  */
@@ -396,11 +395,13 @@ void trap(struct Trapframe *tf)
 	// 确保中断被禁用.
 	assert(!(read_eflags() & FL_IF));
 
-	if ((tf->tf_cs & 3) == 3)
+	// 如果从用户态陷入才需要将中断帧保存到环境的中断帧，并让中断帧指针忽略栈上TrapFrame.
+	// 但是此时RSP仍然指向栈中的中断帧入口
+	if ((tf->tf_cs & DPL_USER) == DPL_USER)
 	{
-		// 确保从用户态陷入.
 		// 注意，在做任何重要的内核工作之前，获取大内核锁
 		lock_kernel();
+		// 确保当前环境.
 		assert(curenv);
 		// 如果当前环境是ENV_DYING 状态，则进行垃圾收集
 		if (curenv->env_status == ENV_DYING)
@@ -514,4 +515,3 @@ void page_fault_handler(struct Trapframe *tf)
 	print_trapframe(tf);
 	env_destroy(curenv);
 }
-

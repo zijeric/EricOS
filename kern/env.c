@@ -268,7 +268,7 @@ int env_alloc(struct Env **newenv_store, envid_t parent_id)
 	env_free_list = e->env_link;
 	*newenv_store = e;
 
-	cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+	// cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
 	return 0;
 }
 
@@ -426,21 +426,15 @@ void env_free(struct Env *e)
 	uint64_t pdeno, pteno;
 	physaddr_t pa;
 
-	// If freeing the current environment, switch to kern_pgdir
-	// before freeing the page directory, just in case the page
-	// gets reused.
+	// 如果释放当前环境，在释放页面目录之前切换到 boot_pml4e，以防重用该页面.
 	if (e == curenv)
 		lcr3(boot_cr3);
 
-	// Note the environment's demise.
-	// cprintf("[%08x] free env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
-
-	// Flush all mapped pages in the user portion of the address space
+	// 刷新地址空间用户部分的所有映射页面
 	pdpe_t *env_pdpe = KADDR(PTE_ADDR(e->env_pml4e[0]));
 	int pdeno_limit;
 	uint64_t pdpe_index;
-	// using 3 instead of NPDPENTRIES as we have only first three indices
-	// set for 4GB of address space.
+	// 使用3而不是NPDPENTRIES，因为我们只有为4GB地址空间设置的前三个索引.
 	for (pdpe_index = 0; pdpe_index <= 3; pdpe_index++)
 	{
 		if (!(env_pdpe[pdpe_index] & PTE_P))
@@ -451,14 +445,14 @@ void env_free(struct Env *e)
 		for (pdeno = 0; pdeno < pdeno_limit; pdeno++)
 		{
 
-			// only look at mapped page tables
+			// 只查看映射的页表
 			if (!(env_pgdir[pdeno] & PTE_P))
 				continue;
-			// find the pa and va of the page table
+			// 找到页表的 pa 和 va
 			pa = PTE_ADDR(env_pgdir[pdeno]);
 			pt = (pte_t *)KADDR(pa);
 
-			// unmap all PTEs in this page table
+			// 取消映射此页表中的所有 PTE
 			for (pteno = 0; pteno < PTX(~0); pteno++)
 			{
 				if (pt[pteno] & PTE_P)
@@ -467,40 +461,38 @@ void env_free(struct Env *e)
 				}
 			}
 
-			// free the page table itself
+			// 释放页表本身
 			env_pgdir[pdeno] = 0;
 			page_decref(pa2page(pa));
 		}
-		// free the page directory
+		// 释放页目录
 		pa = PTE_ADDR(env_pdpe[pdpe_index]);
 		env_pdpe[pdpe_index] = 0;
 		page_decref(pa2page(pa));
 	}
-	// free the page directory pointer
+	// 释放页目录指针
 	page_decref(pa2page(PTE_ADDR(e->env_pml4e[0])));
-	// free the page map level 4 (PML4)
+	// 释放4级映射页表 (PML4)
 	e->env_pml4e[0] = 0;
 	pa = e->env_cr3;
 	e->env_pml4e = 0;
 	e->env_cr3 = 0;
 	page_decref(pa2page(pa));
 
-	// return the environment to the free list
+	// 返回环境到 env_free_list
 	e->env_status = ENV_FREE;
 	e->env_link = env_free_list;
 	env_free_list = e;
 }
 
 //
-// Frees environment e.
-// If e was the current env, then runs a new environment (and does not return
-// to the caller).
+// 释放环境 e。
+// 如果 e 是当前的 env，则运行一个新环境(并且不返回给调用者)。
 //
 void env_destroy(struct Env *e)
 {
-	// If e is currently running on other CPUs, we change its state to
-	// ENV_DYING. A zombie environment will be freed the next time
-	// it traps to the kernel.
+	// 如果 e 当前正在其他 cpu 上运行，我们将其状态更改为 ENV_DYING
+	// 僵尸环境下次进入内核时将被释放.
 	if (e->env_status == ENV_RUNNING && curenv != e)
 	{
 		e->env_status = ENV_DYING;
@@ -546,7 +538,7 @@ void env_pop_tf(struct Trapframe *tf)
 					 /* 跳过 tf_trapno, tf_errcode */
 					 "\taddq $16,%%rsp\n"
 					 /* iret之后发生权限级的改变(即由内核态切换到用户态)，所以iret会依次弹出5个寄存器
-					 (rip、cs、rflags、rsp、ss) */
+					 (rip、cs、eflags、rsp、ss) */
 					 "\tiretq"
 					 /* 这些寄存器在env_alloc(), load_icode()中都已赋值，iret后，rip就指向了程序的入口地址，
 					 cs也由内核代码段转向了用户代码段，rsp也由内核栈转到了用户栈 */
@@ -569,7 +561,7 @@ void env_run(struct Env *e)
 {
 	/**
 	 * 步骤1: 如果这是一个上下文切换(一个新的环境正在运行):
-	 * 	1.如果当前环境是ENV_RUNNING，则将当前环境(如果有)设置回ENV_RUNNABLE(想想它还可以处于什么状态 ENV_NOT_RUNNABLE)，
+	 * 	1.如果当前环境是ENV_RUNNING，则将当前环境(如果有)设置回ENV_RUNNABLE(还可能是 ENV_NOT_RUNNABLE)，
 	 * 	2.将 curenv 设置为新环境，
 	 * 	3.将其状态设置为ENV_RUNNING，
 	 * 	4.更新其 env_runs 计数器，
@@ -580,7 +572,7 @@ void env_run(struct Env *e)
 	 * 注意，这个函数从e->env_tf加载新环境的状态，确保您已经将e->env_tf的相关部分设置为合理的值
 	 */
 
-		// 1.如果当前运行的环境(curenv)是正在运行(ENV_RUNNING)，上下文切换，更新状态为等待运行(ENV_RUNNABLE)
+	// 1.如果当前运行的环境(curenv)是正在运行(ENV_RUNNING)，上下文切换，更新状态为等待运行(ENV_RUNNABLE)
 	if (curenv && curenv->env_status == ENV_RUNNING)
 	{
 		curenv->env_status = ENV_RUNNABLE;
@@ -589,8 +581,9 @@ void env_run(struct Env *e)
 	curenv = e;
 	curenv->env_status = ENV_RUNNING;
 	curenv->env_runs++;
-	// env_run() 修改了参数e的成员状态之后就会调用lcr3切换到进程的4级页表，这时候内存管理单元MMU所使用的寻址上下文立即发生了变化。在地址切换前后，为什么参数e仍能够被引用？
-	// 内核地址空间被映射到4级页表，所有环境4级页表的内核部分是相同的，通过内核地址空间访问e.
+	// env_run() 修改了参数e的成员状态之后就会调用lcr3切换到进程的4级页表，这时候MMU所寻址的地址空间立即发生了变化
+	// 在地址切换前后，为什么参数e仍能够被引用？
+	// 内核地址空间被映射到4级页表，所有环境4级页表的内核部分是相同的，通过内核地址空间访问e.(以DPL=0内核态的形式)
 	// 5.使用lcr3()切换到e对应的4级页表(地址空间)
 	lcr3(curenv->env_cr3);
 	// 用户态 -> 内核态，加大内核锁

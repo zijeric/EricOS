@@ -38,6 +38,7 @@ sys_cgetc(void)
 /**
  * 返回当前环境的 envid.
  */
+// 内核态系统调用处理程序
 static envid_t
 sys_getenvid(void)
 {
@@ -58,12 +59,6 @@ sys_env_destroy(envid_t envid)
 	// 当前环境envid不存在/调用者没有修改envid的权限
 	if ((r = envid2env(envid, &e, 1)) < 0)
 		return r;
-	// // 当前运行的环境
-	// if (e == curenv)
-	// 	cprintf("[%08x] exiting gracefully\n", curenv->env_id);
-	// // 非当前环境
-	// else
-	// 	cprintf("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
 
 	// 销毁
 	env_destroy(e);
@@ -148,7 +143,6 @@ sys_env_set_status(envid_t envid, int status)
 static int
 sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 {
-	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
 	struct Env *envnow;
