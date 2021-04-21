@@ -19,7 +19,7 @@ int ncpu;
  * Per-CPU(NCPU) 的内核栈(size:KSTKSIZE)
  * 多个 cpu 可以同时 trap 到内核中，为了防止干扰彼此的运行，需要为每个处理器设置单独的栈空间
  * BSP 的内核栈地址是 bootstack，映射到虚拟地址 KSTACKTOP 之下的 KSTKSIZE 大小的空间
- * 紧随着，跳过保护页(KSTKGAP-bit)之后，映射 CPU1 内核栈空间，以此类推
+ * 紧随着，跳过保护页(KSTKGAP)之后，映射 CPU1 内核栈空间，以此类推
  * 
  * 如果共享的内核栈，中断时，硬件会先自动将相关寄存器进栈，然后才执行锁的检查，共享内核栈可能会导致系统崩溃
  * 支持多个 CPU 的时候，只有一份内核4级页表，所有CPU都会使用这个4级页表映射CPU栈
@@ -32,7 +32,6 @@ unsigned char percpu_kstacks[NCPU][KSTKSIZE]
 	__attribute__((aligned(PGSIZE)));
 
 // 参照 MultiProcessor Specification Version 1.[14]
-
 struct mp
 {						  // 浮动指针 [MP 4.1]
 	uint8_t signature[4]; // "_MP_"
@@ -119,8 +118,6 @@ mpsearch(void)
 	uint8_t *bda;
 	uint32_t p;
 	struct mp *mp;
-
-	//static_assert(sizeof(*mp) == 32);
 
 	// The BIOS data area lives in 16-bit segment 0x40.
 	bda = (uint8_t *)KADDR(0x40 << 4);

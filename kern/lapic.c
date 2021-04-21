@@ -111,6 +111,7 @@ void lapic_init(void)
 	lapicw(TPR, 0);
 }
 
+// 返回调用它的CPU的ID，可以被用作是cpus数组的索引
 int cpunum(void)
 {
 	if (lapic)

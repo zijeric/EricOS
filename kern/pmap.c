@@ -406,7 +406,7 @@ void x64_vm_init(void)
 	// 因此，如果内核栈溢出将会触发 panic，而不是覆盖内存，类似规定被称为"守护页"
 	// 权限: 内核 RW，用户 NONE
 	boot_map_region(boot_pml4e, (KSTACKTOP - KSTKSIZE), KSTKSIZE, PADDR(bootstack), PTE_P | PTE_W);
-	cprintf("KSTKSIZE: %p\n", KSTKSIZE);
+	cprintf("bootstack: %p\n", PADDR(bootstack));
 	// 仅映射[KSTACKTOP-KSTKSIZE, KSTACKTOP)，即基址:KSTACKTOP-KSTKSIZE, 拓展偏移:KSTKSIZE
 
 	//////////////////////////////////////////////////////////////////////
@@ -472,7 +472,6 @@ void x64_vm_init(void)
 static void
 mem_init_mp(void)
 {
-	// 映射 APs 的内核栈到 KSTACKTOP，映射区域如pic/虚拟内存映射.png
 	// ncpus: nth CPU
 	size_t ncpus = 0;
 	for (; ncpus < NCPU; ncpus++)
