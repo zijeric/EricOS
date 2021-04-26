@@ -5,4 +5,4 @@ QEMUOPTS += -smp $(CPUS)
 QEMUOPTS += -drive file=./fs.img,index=1,media=disk,format=raw
 
 run:
-	$(QEMU) $(QEMUOPTS)
+	$(QEMU) -nographic $(QEMUOPTS)
