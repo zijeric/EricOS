@@ -313,12 +313,13 @@ trap_dispatch(struct Trapframe *tf)
 		sched_yield();
 		return;
 	}
-
+	// 键盘中断
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_KBD)
 	{
 		kbd_intr();
 		return;
 	}
+	// 串口中断
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_SERIAL)
 	{
 		serial_intr();

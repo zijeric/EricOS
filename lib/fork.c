@@ -123,6 +123,7 @@ fork(void)
 	}
 	if (childid == 0)
 	{
+		// thisenv 父进程
 		thisenv = &envs[ENVX(sys_getenvid())];
 		// 子环境的返回值
 		return 0;

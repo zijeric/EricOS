@@ -59,7 +59,10 @@ sys_env_destroy(envid_t envid)
 	// 当前环境envid不存在/调用者没有修改envid的权限
 	if ((r = envid2env(envid, &e, 1)) < 0)
 		return r;
-
+	// if (e == curenv)
+	// 	cprintf("[%08x] exiting gracefully\n", curenv->env_id);
+	// else
+	// 	cprintf("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
 	// 销毁
 	env_destroy(e);
 	return 0;
@@ -182,7 +185,7 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 }
 
 /**
- * 分配一页物理内存，并将其以 perm 权限映射 envid 环境 va 所对应的地址空间
+ * 分配一页物理内存，并将其以 perm 权限映射 envid 环境 va 所对应的一页地址空间
  * 对 pmap.c 中 page_alloc() 和 page_insert() 的封装
  * - 参数 perm 为 envid 对应环境的地址空间权限
  * - 清零页内容，防止脏数据产生异常
@@ -247,8 +250,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
  * 	-E_NO_MEM
  */
 static int
-sys_page_map(envid_t srcenvid, void *srcva,
-			 envid_t dstenvid, void *dstva, int perm)
+sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int perm)
 {
 	// sys_page_alloc() 是对 page_lookup() 和 page_insert() 的封装.
 	//   但新增检查参数的正确性.
@@ -272,7 +274,7 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	// 检查页请求是否正确 (srcva 是否映射到 srcenvid 的地址空间)
 	struct PageInfo *map;
 	pte_t *p_entry;
-	// 在页式地址转换机制中查找 secenv 4级页表的线性地址 srcva 所对应的物理页
+	// 在页式地址转换机制中查找 srcenv 4级页表的线性地址 srcva 所对应的物理页
 	map = page_lookup(srcenv->env_pml4e, srcva, &p_entry);
 	if (!map)
 	{
@@ -362,9 +364,13 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	{
 		return -E_IPC_NOT_RECV;
 	}
+	// 接收状态复位
 	recvr->env_ipc_recving = 0;
+	// 发送进程置接收进程的来源字段
 	recvr->env_ipc_from = curenv->env_id;
+	// 发送进程置接收进程的物理页权限
 	recvr->env_ipc_perm = 0;
+	// 当要映射物理页时进入循环
 	if ((srcva && (srcva < (void *)UTOP)) && ((recvr->env_ipc_dstva) && (recvr->env_ipc_dstva < (void *)UTOP)))
 	{
 		if (PGOFF(srcva))
@@ -379,20 +385,25 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 			return -E_INVAL;
 		}
 		pte_t *entry;
+		// 在页式地址转换机制中查找线性地址srcva所对应的物理页结构PageInfo map
 		struct PageInfo *map = page_lookup(curenv->env_pml4e, srcva, &entry);
 		if (!(map) || ((perm & PTE_W) && !(*entry & PTE_W)))
 		{
 			cprintf("\n VA is not mapped in senders address space or Sending read only pages with write permissions not permissible\n");
 			return -E_INVAL;
 		}
+		// 建立页表页的映射及权限，将物理页 map 映射到接收进程的IPC目标线性地址 ipc_dstva
 		if (page_insert(recvr->env_pml4e, map, recvr->env_ipc_dstva, perm) < 0)
 		{
 			cprintf("\n No memory to map the page to target env\n");
 			return -E_NO_MEM;
 		}
+		// 设置接收进程的IPC权限位
 		recvr->env_ipc_perm = perm;
 	}
+	// 发送进程置接收进程的IPC值
 	recvr->env_ipc_value = value;
+	// 发送进程置接收进程的进程状态为就绪态，让接收进程接收
 	recvr->env_status = ENV_RUNNABLE;
 	return 0;
 }
@@ -408,15 +419,20 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 static int
 sys_ipc_recv(void *dstva)
 {
+	// 接收状态
 	curenv->env_ipc_recving = 1;
 	if (dstva < (void *)UTOP)
 	{
 		if (PGOFF(dstva))
 			return -E_INVAL;
 	}
+	// 目标线性地址
 	curenv->env_ipc_dstva = dstva;
+	// 阻塞态
 	curenv->env_status = ENV_NOT_RUNNABLE;
+	// RAX返回值
 	curenv->env_tf.tf_regs.reg_rax = 0;
+	// 让出CPU
 	sched_yield();
 	return 0;
 }
