@@ -129,6 +129,8 @@ $(OBJDIR)/kern/kernel: $(KERN_OBJFILES) $(KERN_BINFILES) kern/kernel.ld \
 	$(V)$(OBJDUMP) -S $@ > $@.asm
 	$(V)$(NM) -n $@ > $@.sym
 
+# dd指令：把指定的输入文件拷贝到指定的输出文件中，并且在拷贝的过程中可以进行格式转换
+# conv=notrunc防止文件被截断（用于虚拟软盘）
 # 如何 build 内核磁盘映像
 $(OBJDIR)/kern/kernel.img: $(OBJDIR)/kern/kernel $(OBJDIR)/boot/boot
 	@echo + mk $@

@@ -24,5 +24,5 @@ void libmain(int argc, char **argv)
 	umain(argc, argv);
 
 	// 退出当前环境，env_destroy
-	exit();
+	sys_env_destroy(0);
 }

@@ -8,9 +8,9 @@ umain(int argc, char **argv)
 
 	binaryname = "icode";
 
-	cprintf("icode startup\n");
+	// cprintf("icode startup\n");
 
-	cprintf("icode: open /motd\n");
+	// cprintf("icode: open /motd\n");
 	if ((fd = open("/motd", O_RDONLY)) < 0)
 		panic("icode: open /motd: %e", fd);
 

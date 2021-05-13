@@ -256,7 +256,7 @@ void mp_init(void)
 		cprintf("SMP: configuration not found, SMP disabled\n");
 		return;
 	}
-	cprintf("SMP: CPU %d found %d CPU(s)\n", bootcpu->cpu_id, ncpu);
+	// cprintf("SMP: CPU %d found %d CPU(s)\n", bootcpu->cpu_id, ncpu);
 
 	if (mp->imcrp)
 	{

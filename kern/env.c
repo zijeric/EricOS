@@ -195,10 +195,10 @@ env_setup_vm(struct Env *e)
 		}
 	}
 
-	// 将 UVPT虚拟地址 对应在4级页表中的表项 设置成4级页表自己的物理地址
+	// 将 UVPT虚拟地址 对应在4级页表中的表项 设置成进程自己的4级页表物理地址
 	// 当用户环境访问4级页表，只要把对应的虚拟地址设置成 UVPT 即可
 	// 配置新环境4级页表的 UVPT 映射 env 自己的页表为只读，无法被用户篡改
-	// 也就是说，如果一个用户程序想访问页目录的话，只要把对应的虚拟地址设置成UVPT即可
+	// 也就是说，如果一个用户程序想访问4级映射页表的话，只要把对应的虚拟地址设置成UVPT即可
 	// 权限: 内核 R-, 用户 R-
 	e->env_pml4e[PML4(UVPT)] = e->env_cr3 | PTE_P | PTE_U;
 
@@ -538,7 +538,7 @@ void env_pop_tf(struct Trapframe *tf)
 					 /* 跳过 tf_trapno, tf_errcode */
 					 "\taddq $16,%%rsp\n"
 					 /* iret之后发生权限级的改变(即由内核态切换到用户态)，所以iret会依次弹出5个寄存器
-					 (rip、cs、eflags、rsp、ss) */
+					 (rip、cs、rflags、rsp、ss) */
 					 "\tiretq"
 					 /* 这些寄存器在env_alloc(), load_icode()中都已赋值，iret后，rip就指向了程序的入口地址，
 					 cs也由内核代码段转向了用户代码段，rsp也由内核栈转到了用户栈 */

@@ -67,7 +67,7 @@ multiboot_read(multiboot_info_t *mbinfo, size_t *basemem, size_t *extmem)
 	memory_map_t *mmap_base = (memory_map_t *)(uintptr_t)mbinfo->mmap_addr;
 	memory_map_t *mmap_list[mbinfo->mmap_length / (sizeof(memory_map_t))];
 
-	cprintf("\ne820 MEMORY MAP\n");
+	// cprintf("\ne820 MEMORY MAP\n");
 	for (i = 0; i < (mbinfo->mmap_length / (sizeof(memory_map_t))); i++)
 	{
 		memory_map_t *mmap = &mmap_base[i];
@@ -76,8 +76,8 @@ multiboot_read(multiboot_info_t *mbinfo, size_t *basemem, size_t *extmem)
 		uint64_t len = APPEND_HILO(mmap->length_high, mmap->length_low);
 
 		// type: 1 可用内存，type: 2 保留内存(包括设备的 IO 映射、为 BIOS 保留的空间或物理损坏的内存等)
-		cprintf("size: %d, physical address: 0x%016x, length: 0x%016x, type: %s\n", mmap->size,
-				addr, len, (mmap->type > 1 ? "availiable" : "reserved"));
+		// cprintf("size: %d, physical address: 0x%016x, length: 0x%016x, type: %s\n", mmap->size,
+		// 		addr, len, (mmap->type > 1 ? "availiable" : "reserved"));
 
 		if (mmap->type > 5 || mmap->type < 1)
 			mmap->type = MB_TYPE_RESERVED;
@@ -204,16 +204,16 @@ i386_detect_memory(void)
 		// (16-bit)
 		npages = npages_basemem;
 
-	cprintf("Physical memory: %uM available, base = %uK, extended = %uM\n",
-			npages * PGSIZE / (1024 * 1024),
-			npages_basemem * PGSIZE / 1024,
-			npages_extmem * PGSIZE / 1024 / 1024);
+	// cprintf("物理内存: %uM 可用，基础内存: %uK，拓展内存: %uM\n",
+	// 		npages * PGSIZE / (1024 * 1024),
+	// 		npages_basemem * PGSIZE / 1024,
+	// 		npages_extmem * PGSIZE / 1024 / 1024);
 
 	// AlvOS 的物理内存硬件是固定的，只支持 256MB 的物理内存
 	if (npages > ((255 * 1024 * 1024) / PGSIZE))
 	{
 		npages = (255 * 1024 * 1024) / PGSIZE;
-		cprintf("Using only %uM of the available memory, npages = %d.\n", npages * PGSIZE / 1024 / 1024, npages);
+		// cprintf("仅使用%uM内存, pf_num: %d.\n", npages * PGSIZE / 1024 / 1024, npages);
 	}
 }
 
@@ -267,14 +267,14 @@ boot_alloc(uint32_t n)
 	if (n > 0)
 	{
 		uint32_t newSize = ROUNDUP(n, PGSIZE);
-		cprintf("boot_alloc: \n newSize: %p \n end of newSize: %p \n end of usable Mem: %p \n AlvOS bootstrap va(0x100000): %p \n AlvOS kernel va(0x200000): %p \n mapping base pa(KERNBASE): %p \n",
-				newSize, nextfree + newSize, KADDR(0xfefd000), KADDR(0x200000), PADDR(KERNBASE));
+		// cprintf("boot_alloc: \n newSize: %p \n end of newSize: %p \n end of usable Mem: %p \n AlvOS bootstrap va(0x100000): %p \n AlvOS kernel va(0x200000): %p \n mapping base pa(KERNBASE): %p \n",
+		// 		newSize, nextfree + newSize, KADDR(0xfefd000), KADDR(0x200000), PADDR(KERNBASE));
 		// 处理 PC 内存不足的情况：KADDR(0xfefd000) -- 受限于256MB，e820映射给出的内核可用地址空间的最后一个地址.
 		//last address of the usable address space that the e820 map gives.
 		if (nextfree + newSize > (char *)KADDR(0xfefd000))
 			panic("No memory available in boot_alloc");
 		nextfree = nextfree + newSize;
-		cprintf("boot_alloc:\n next_free: %p\n");
+		// cprintf("boot_alloc:\n next_free: %p\n");
 	}
 	return result;
 }
@@ -319,7 +319,7 @@ void x64_vm_init(void)
 
 	//////////////////////////////////////////////////////////////////////
 	// 2.为了替换 kern/entry.S 中临时的 entry_pgdir 创建内核的4级页表(一个页)，并设置权限.
-	cprintf("x64_vm_init: allocate memory for pml4e.\n");
+	// cprintf("x64_vm_init: allocate memory for pml4e.\n");
 	pml4e = boot_alloc(PGSIZE);
 	memset(pml4e, 0, PGSIZE);
 	// 更新全局4级页表变量 boot_pml4e
@@ -333,7 +333,7 @@ void x64_vm_init(void)
 	// 内核使用 pages 数组来跟踪物理页：
 	// pages 数组的每一项是一个 PageInfo 结构，对应一个物理页的信息
 	// npages 是管理内存所需要的物理页数，调用 memset 将每个PageInfo结构体的所有字段初始化为 0(present-bit)
-	cprintf("x64_vm_init: allocate memory for pages[%d].\n", npages);
+	// cprintf("x64_vm_init: allocate memory for pages[%d].\n", npages);
 	pages = (struct PageInfo *)boot_alloc(sizeof(struct PageInfo) * npages);
 	// memset(pages, 0, pages_size); 根据 ELF 格式分析可知，未初始化变量在 .bss 段会被置零
 
@@ -341,7 +341,7 @@ void x64_vm_init(void)
 	// 分配 管理环境内存 所需要的空间
 	// 给 NENV 个 Env 结构体在内存中分配空间，envs 存储该数组的首地址
 	// (struct Env *) envs 是指向所有环境链表的指针，其操作方式跟内存管理的 pages 类似
-	cprintf("x64_vm_init: allocate memory for envs[%d].\n", NENV);
+	// cprintf("x64_vm_init: allocate memory for envs[%d].\n", NENV);
 	envs = (struct Env *)boot_alloc(sizeof(struct Env) * NENV);
 	memset(envs, 0, NENV * sizeof(struct Env));
 	// size_t end_envs = PPN(PADDR(0x80045a4000));
@@ -383,7 +383,7 @@ void x64_vm_init(void)
 	// 权限: 内核 R-，用户 R-
 	size_t pg_size = ROUNDUP(npages * (sizeof(struct PageInfo)), PGSIZE);
 	boot_map_region(boot_pml4e, UPAGES, pg_size, PADDR(pages), PTE_U | PTE_P);
-	cprintf("pg_size: %p\n", pg_size);
+	// cprintf("pg_size: %p\n", pg_size);
 
 	//////////////////////////////////////////////////////////////////////
 	// [UENVS, sizeof(envs)] => [envs, sizeof(envs)]
@@ -392,7 +392,7 @@ void x64_vm_init(void)
 	// 权限: 内核 R-，用户 R-
 	size_t env_size = ROUNDUP(NENV * (sizeof(struct Env)), PGSIZE);
 	boot_map_region(boot_pml4e, UENVS, env_size, PADDR(envs), PTE_U | PTE_P);
-	cprintf("env_size: %p\n", env_size);
+	// cprintf("env_size: %p\n", env_size);
 	// 注意，pages和envs本身作为内核代码的数组，拥有自己的虚拟地址，且内核可对其进行读写
 	// boot_map_region函数将两个数组分别映射到了UPAGES和UENVS起 4M空间的虚拟地址，这相当于另外的映射镜像，
 	// 4级页表项权限被设为用户/内核只可读，因此通过UPAGES和UENVS的虚拟地址去访问pages和envs的话，只能读不能写
@@ -406,7 +406,7 @@ void x64_vm_init(void)
 	// 因此，如果内核栈溢出将会触发 panic，而不是覆盖内存，类似规定被称为"守护页"
 	// 权限: 内核 RW，用户 NONE
 	boot_map_region(boot_pml4e, (KSTACKTOP - KSTKSIZE), KSTKSIZE, PADDR(bootstack), PTE_P | PTE_W);
-	cprintf("bootstack: %p\n", PADDR(bootstack));
+	// cprintf("bootstack: %p\n", PADDR(bootstack));
 	// 仅映射[KSTACKTOP-KSTKSIZE, KSTACKTOP)，即基址:KSTACKTOP-KSTKSIZE, 拓展偏移:KSTKSIZE
 
 	//////////////////////////////////////////////////////////////////////
@@ -415,12 +415,12 @@ void x64_vm_init(void)
 	// 事实上内核所占的物理内存不一定有 256MB 那么大
 	// 权限: 内核 RW，用户 NONE
 	boot_map_region(boot_pml4e, KERNBASE, npages * PGSIZE, (physaddr_t)0x0, PTE_P | PTE_W);
-	cprintf("kern_size: %p\n", npages * PGSIZE);
+	// cprintf("kern_size: %p\n", npages * PGSIZE);
 
 	// 初始化内存映射中与 SMP 相关的部分
 	mem_init_mp();
 
-	check_boot_pml4e(boot_pml4e);
+	// check_boot_pml4e(boot_pml4e);
 
 	//////////////////////////////////////////////////////////////////////
 	// 权限: 内核 RW, 用户 -
@@ -431,16 +431,16 @@ void x64_vm_init(void)
 	// boot_cr3 在KERNBASE以上区间的映射包含了 pml4virt，且管理了pages, envs, kern_stack
 	// MMU 分页硬件在进行页式地址转换时会自动地从 CR3 中取得4级页表地址
 	lcr3(boot_cr3);
-	cprintf("boot_cr3: %p\n",boot_cr3);
+	// cprintf("boot_cr3: %p\n",boot_cr3);
 
 	// pdpe_t *pdpe = KADDR(PTE_ADDR(pml4e[1]));
 	// pde_t *pgdir = KADDR(PTE_ADDR(pdpe[0]));
 
-	check_page_free_list(1);
-	check_page_alloc();
-	page_check();
+	// check_page_free_list(1);
+	// check_page_alloc();
+	// page_check();
 
-	check_page_free_list(0);
+	// check_page_free_list(0);
 }
 
 /**
@@ -651,7 +651,7 @@ pml4e_walk(pml4e_t *pml4e, const void *va, int create)
 	// 内核 pml4e 唯一，通过 pml4e 可以索引到整个4级页表表
 	if (pml4e)
 	{
-		// pml4e[PML4(va)]: 索引到虚拟地址 va 对应的 pml4e 的表项
+		// pml4e[PML4(va)]: 索引到虚拟地址 va 对应的 pml4e 的表项 pml4e+PML4(va)
 		// pml4e_t *pml4_entry: pdpe表项的物理地址
 		pml4e_t *pml4_entry = &pml4e[PML4(va)];
 		pdpe_t *pdp_entry = NULL;
@@ -667,7 +667,7 @@ pml4e_walk(pml4e_t *pml4e, const void *va, int create)
 					return NULL;
 				// 增加新物理页的引用次数并将其清空，根据返回参数 pdpe_t pointer 调用 pdpe_walk()
 				pp->pp_ref++;
-				// pdp_entry 指向 PDPE 页的虚拟地址
+				// pdp_entry 指向 PDP 页的虚拟地址
 				pdp_entry = (pdpe_t *)page2kva(pp);
 				memset(pdp_entry, 0, PGSIZE);
 

@@ -22,7 +22,8 @@
  */
 
 uint64_t end_debug;
-
+void kernel_banner();
+void p_init();
 static void boot_aps(void);
 
 void i386_init(void)
@@ -36,8 +37,12 @@ void i386_init(void)
 	// 为了确保所有静态/全局变量初始值为 0，清除程序中未初始化的全局数据(BSS)部分.
 	memset(edata, 0, end - edata);
 
-	// 初始化控制台(包括显存的初始化、键盘的初始化). 在此之后才能调用 cprintf()!
+	// 初始化控制台(包括显存的初始化、键盘的初始化).
 	cons_init();
+	p_init();
+
+	// AlvOS logo!
+	kernel_banner();
 
 	// end 在 linker(kernel.ld) 中初始化：内核 ELF 格式文件后首字节的地址
 	// 因此 end 是 linker 没有 分配任何内核代码或全局变量的第一个虚拟地址/线性地址(.bss 段是已加载内核代码的最后一个段)
@@ -144,6 +149,7 @@ void i386_init(void)
 	 */
 	// Start fs.
 	ENV_CREATE(fs_fs, ENV_TYPE_FS);
+	// ENV_CREATE(user_faultwrite, ENV_TYPE_USER);
 
 #if defined(TEST)
 	// Don't touch -- used by grading script!
@@ -287,7 +293,29 @@ void _panic(const char *file, int line, const char *fmt, ...)
 	va_end(ap);
 
 dead:
-	/* 直接陷入内核监视器 */
 	while (1)
-		monitor(NULL);
+		;
+}
+
+void kernel_banner(){
+	cprintf("	  _        ____   _____   _       _                 _ _            ______   \n");
+	cprintf("	   ____     /\\   | |      / __ \\ / ____| (_)     | |               | (_)           \\ \\ \\ \\  \n");
+	cprintf("	  / __ \\   /  \\  | |_   _| |  | | (___    _ ___  | | ___   __ _  __| |_ _ __   __ _ \\ \\ \\ \\ \n");
+	cprintf("	 / / _` | / /\\ \\ | \\ \\ / / |  | |\\___ \\  | / __| | |/ _ \\ / _` |/ _` | | '_ \\ / _` | > > > >\n");
+	cprintf("	| | (_| |/ ____ \\| |\\ V /| |__| |____) | | \\__ \\ | | (_) | (_| | (_| | | | | | (_| |/ / / / \n");
+	cprintf("	 \\ \\__,_/_/    \\_\\_| \\_/  \\____/|_____/  |_|___/ |_|\\___/ \\__,_|\\__,_|_|_| |_|\\__, /_/_/_/  \n");
+	cprintf("	  \\____/                                                                       __/ |        \n");
+	cprintf("	                                                                              |___/         \n");
+}
+
+void p_init(){
+	// cprintf("正在引导内核...\n");
+	cprintf("正在打开A20地址总线...\n");asm volatile("pause");
+	cprintf("正在通过BIOS的0xE820号功能读取计算机的内存信息...\n");
+	cprintf("正在加载平坦地址模式的GDT...\n");
+	cprintf("正在进入保护模式...\n");
+	cprintf("准备jmpl长跳转刷新流水线指令，并切换为64-bit GDT...\n");
+	cprintf("设置段寄存器和临时栈...");
+	// cprintf("")
+
 }
