@@ -25,8 +25,6 @@ struct Command
 
 static struct Command commands[] = {
 	{"help", "Display this list of commands", mon_help},
-	{"kerninfo", "Display information about the kernel", mon_kerninfo},
-	{"backtrace", "Displays the backtrace information for debugging", mon_backtrace},
 };
 #define NCOMMANDS (sizeof(commands) / sizeof(commands[0]))
 
@@ -39,85 +37,6 @@ int mon_help(int argc, char **argv, struct Trapframe *tf)
 	for (i = 0; i < NCOMMANDS; i++)
 		cprintf("%s - %s\n", commands[i].name, commands[i].desc);
 	return 0;
-}
-
-int mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
-{
-	extern char _start[], entry[], etext[], edata[], end[];
-
-	cprintf("Special kernel symbols:\n");
-	cprintf("  _start                  %08x (phys)\n", _start);
-	cprintf("  entry  %08x (virt)  %08x (phys)\n", entry, entry - KERNBASE);
-	cprintf("  etext  %08x (virt)  %08x (phys)\n", etext, etext - KERNBASE);
-	cprintf("  edata  %08x (virt)  %08x (phys)\n", edata, edata - KERNBASE);
-	cprintf("  end    %08x (virt)  %08x (phys)\n", end, end - KERNBASE);
-	cprintf("Kernel executable memory footprint: %dKB\n",
-			ROUNDUP(end - entry, 1024) / 1024);
-	return 0;
-}
-
-/**
- * K> backtrace
-Stack backtrace:
-  rbp 000000800421af00  rip 00000080042010ff
-       kern/monitor.c:86: mon_backtrace+0000000000000035  args:3  0000000000000000 000000000421b909 0000000000000080
-  rbp 000000800421afb0  rip 000000800420144d
-       kern/monitor.c:163: runcmd+00000000000001d3  args:2  0000000000000001 0000000000000002
- * 思考过程:
- * 1.通过objdump命令,观察内核中不同的段
- * 2.objdump -h obj/kern/kernel
- *    需要注意 .stab 和 .stabstr 两段
- * 3.objdump -G obj/kern/kernel > stabs.txt
- *    由于显示内容较多,可以将结果输出到文件中
- *    文件(N_SO)和函数(N_FUN)项在.stab中按照指令地址递增的顺序组织
- * 4.根据eip 和 n_type(N_SO, N_SOL或N_FUN), 在.stab段中查找相应的Stab结构项(调用stab_binsearch)
- * 5.根据相应 Stab 结构的 n_strx 属性，找到其在.stabstr段中的索引，从该索引开始的字符串就是其对应的名字（文件名或函数名）
- * 6(*).根据 eip 和 n_type(N_SLINE)，在.stab段中找到相应的行号(n_desc字段)
- */
-int mon_backtrace(int argc, char **argv, struct Trapframe *tf)
-{
-	// 显示被调用函数的回溯.
-	// rsp: stack pointer 栈指针(push/pop 操作), ebp: base pointer 当前函数栈的开头
-	// rip: read_rip(rip)
-	// 1. 利用 read_ebp() 函数获取当前ebp的值，read_rip(rip) 获取当前 rip 的值
-	// 2. 利用 rbp 的初始值与0比较，判断是否停止(0:停止)
-	// 3. 利用数组指针运算来获取 eip 以及 args 参数
-	// 4. 利用 Eipdebuginfo 结构体的属性参数获取文件名信息
-	uint64_t *rbp = (uint64_t *)read_rbp();
-	// RIP 是函数的返回指令指针(return Addr)：函数返回时将返回到的指令地址
-	uint64_t rip;
-	read_rip(rip);
-	int count = 0;
-	cprintf("Stack backtrace:\n");
-	// 到达函数调用的顶部时停止
-	while (rbp != 0)
-	{
-		// 输出 %rbp 和 %rip 的当前值，然后取消引用先前的值
-		cprintf("  rbp %#016x  rip %#016x\n", (uint64_t)rbp, rip);
-
-		struct Ripdebuginfo info;
-		if (debuginfo_rip(rip, &info) == 0)
-		{
-			// 检查结构是否已填充.
-			cprintf("       %s:%d: %s+%#016x  args:%d",
-					info.rip_file, info.rip_line, info.rip_fn_name,
-					(uint64_t)rip - info.rip_fn_addr, info.rip_fn_narg);
-			// 输出参数
-			int args = info.rip_fn_narg;
-			int argc = 1;
-			while (args > 0)
-			{
-				cprintf("  %#016x", *(rbp - argc) >> 32);
-				args--;
-				argc++;
-			}
-			cprintf("\n");
-		}
-		rip = *(rbp + 1);
-		rbp = (uint64_t *)*rbp;
-		count++;
-	}
-	return count;
 }
 
 /************************* 内核监控命令解释器 *************************/
@@ -204,7 +123,7 @@ void monitor(struct Trapframe *tf)
 	{
 		// readline 等待用户输入一个命令字符串，"回车"代表命令行结束
 		// buf 指向输入的字符串存放的位置
-		buf = readline("K> ");
+		buf = readline("A> ");
 		if (buf != NULL)
 			// 处理命令
 			if (runcmd(buf, tf) < 0)

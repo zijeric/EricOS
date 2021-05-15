@@ -40,9 +40,9 @@ sys_cgetc(void)
  */
 // 内核态系统调用处理程序
 static envid_t
-sys_getenvid(void)
+sys_getprocid(void)
 {
-	return curenv->env_id;
+	return curenv->proc_id;
 }
 
 /**
@@ -60,9 +60,9 @@ sys_env_destroy(envid_t envid)
 	if ((r = envid2env(envid, &e, 1)) < 0)
 		return r;
 	// if (e == curenv)
-	// 	cprintf("[%08x] exiting gracefully\n", curenv->env_id);
+	// 	cprintf("[%08x] exiting gracefully\n", curenv->proc_id);
 	// else
-	// 	cprintf("[%08x] destroying %08x\n", curenv->env_id, e->env_id);
+	// 	cprintf("[%08x] destroying %08x\n", curenv->proc_id, e->proc_id);
 	// 销毁
 	env_destroy(e);
 	return 0;
@@ -90,7 +90,7 @@ sys_exofork(void)
 
 	// 创建子环境
 	struct Env *child;
-	int result = env_alloc(&child, curenv->env_id);
+	int result = env_alloc(&child, curenv->proc_id);
 	if (result < 0)
 	{
 		cprintf("sys_exofork(): %e \n", result);
@@ -103,9 +103,9 @@ sys_exofork(void)
 	// 为子环境设置返回值 0
 	child->env_tf.tf_regs.reg_rax = 0;
 	// 子环境的父id
-	child->env_parent_id = curenv->env_id;
+	child->env_parent_id = curenv->proc_id;
 	// 返回子环境的id
-	return child->env_id;
+	return child->proc_id;
 }
 
 /**
@@ -367,7 +367,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	// 接收状态复位
 	recvr->env_ipc_recving = 0;
 	// 发送进程置接收进程的来源字段
-	recvr->env_ipc_from = curenv->env_id;
+	recvr->env_ipc_from = curenv->proc_id;
 	// 发送进程置接收进程的物理页权限
 	recvr->env_ipc_perm = 0;
 	// 当要映射物理页时进入循环
@@ -456,7 +456,7 @@ syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4, 
 	case SYS_cgetc:
 		return sys_cgetc();
 	case SYS_getenvid:
-		return sys_getenvid();
+		return sys_getprocid();
 	case SYS_env_destroy:
 		return sys_env_destroy(a1);
 	case SYS_yield:

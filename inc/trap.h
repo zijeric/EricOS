@@ -76,7 +76,7 @@ struct Trapframe {
     uint32_t tf_padding4;
 	uint64_t tf_trapno;	// 中断向量
 	/* 以下的寄存器由 x86 架构硬件定义 */
-	uint64_t tf_err;	// error code
+	uint64_t tf_err;	// 错误码
 	uintptr_t tf_rip;
 	uint16_t tf_cs;
 	uint16_t tf_padding5;

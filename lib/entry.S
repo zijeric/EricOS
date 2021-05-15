@@ -2,13 +2,13 @@
 #include "inc/memlayout.h"
 
 .data
-	// 定义全局符号'envs'、'pages'、'uvpt'、'uvpd'、'uvpde'、'uvpml4e'
+	// 定义全局符号'procs'、'pages'、'uvpt'、'uvpd'、'uvpde'、'uvpml4e'
 	// 这样它们就可以像普通全局数组一样在C代码中使用
 	// UVPT: 2<<39(1TB) = 0x10000000000, uvpd: 2<<39|2<<30(2GB) = 0x10080000000
 	// uvpde: 2<<39|2<<30|2<<21(4MB) = 0x10080400000
 	// uvpml4e: 2<<39|2<<30|2<<21|2<<12(8KB) = 0x10080402000, size: 0x1000(4KB)
-	.globl envs
-	.set envs, UENVS
+	.globl procs
+	.set procs, UENVS
 	.globl pages
 	.set pages, UPAGES
 	.globl uvpt

@@ -230,7 +230,7 @@ static physaddr_t check_va2pa(pde_t *pgdir, uintptr_t va);
 static void page_check(void);
 
 /**
- * 为了分配 pml4, pages[], envs[] 物理内存空间，需要一个临时的简单物理内存分配器
+ * 为了分配 pml4, pages[], procs[] 物理内存空间，需要一个临时的简单物理内存分配器
  * boot_alloc()只在 AlvOS 初始化其虚拟内存系统时使用，page_alloc()才是真正的页分配器
  * 
  * 如果 n > 0，则分配足够容纳'n'个字节的连续物理内存页(不初始化该内存)，返回虚拟地址
@@ -241,7 +241,7 @@ static void page_check(void);
  *  1.boot_pml4e: PGSIZE 4KB
  * (64-bit CPU 抽象成4级页表的原因就是为了通过一个顶级页表(CR3)以及分页硬件(MMU)能访问所有的对应于任一物理内存的物理页帧)
  *  2.pages[65280]: 255*4KB=1020KB (0xff000)
- *  3.envs[NENV]: 72*4KB=288KB (0x48000)
+ *  3.procs[NENV]: 72*4KB=288KB (0x48000)
  */
 static void *
 boot_alloc(uint32_t n)
@@ -287,7 +287,7 @@ boot_alloc(uint32_t n)
  * 
  * mem_init()	// 初始化内存管理(4级页表映射)
  * - i386_detect_memory()	// 通过汇编指令直接调用硬件查看可以使用的内存大小
- * - boot_alloc()	// 页表映射尚未构建时的内存分配器 -> boot_pml4e, pages[npages], envs[NENV]
+ * - boot_alloc()	// 页表映射尚未构建时的内存分配器 -> boot_pml4e, pages[npages], procs[NENV]
  * - page_init()	// 初始化 pages[] 中的每一个物理页(通过页表映射整个物理内存空间进行管理)，建立 page_free_list 链表从而使用page分配器 page_alloc(), page_free()
  *   - boot_alloc(0)	// 获取内核后第一个空闲的物理地址空间(页对齐)
  * - boot_map_region()	// 更新参数4级页表映射流程pml4->pdpe->pde的表项pte，将线性地址[va, va+size]映射到物理地址[pa, pa+size](PPN + perm)
@@ -298,7 +298,7 @@ boot_alloc(uint32_t n)
  * 1.第一个是将虚拟地址空间[UPAGES, UPAGES+PTSIZE)映射到页表存储的物理地址空间 [pages, pages+PTSIZE)
  *   这里的PTSIZE代表页式内存管理所占用的空间(不包括4级页表)
  * 
- * 2.第一个是将虚拟地址空间[UENVS, UENVS+PTSIZE)映射到envs数组存储的物理地址空间 [envs, envs+PTSIZE)
+ * 2.第一个是将虚拟地址空间[UENVS, UENVS+PTSIZE)映射到procs数组存储的物理地址空间 [procs, procs+PTSIZE)
  *   这里的PTSIZE代表用户环境管理所占用的空间
  * 
  * 3.第三个是将虚拟地址空间[KSTACKTOP-KSTKSIZE, KSTACKTOP) 映射到物理地址空间[bootstack,bootstack+32KB)
@@ -339,13 +339,13 @@ void x64_vm_init(void)
 
 	//////////////////////////////////////////////////////////////////////
 	// 分配 管理环境内存 所需要的空间
-	// 给 NENV 个 Env 结构体在内存中分配空间，envs 存储该数组的首地址
-	// (struct Env *) envs 是指向所有环境链表的指针，其操作方式跟内存管理的 pages 类似
-	// cprintf("x64_vm_init: allocate memory for envs[%d].\n", NENV);
-	envs = (struct Env *)boot_alloc(sizeof(struct Env) * NENV);
-	memset(envs, 0, NENV * sizeof(struct Env));
-	// size_t end_envs = PPN(PADDR(0x80045a4000));
-	// cprintf("end_envs: %p\n", end_envs);
+	// 给 NENV 个 Env 结构体在内存中分配空间，procs 存储该数组的首地址
+	// (struct Env *) procs 是指向所有环境链表的指针，其操作方式跟内存管理的 pages 类似
+	// cprintf("x64_vm_init: allocate memory for procs[%d].\n", NENV);
+	procs = (struct Env *)boot_alloc(sizeof(struct Env) * NENV);
+	memset(procs, 0, NENV * sizeof(struct Env));
+	// size_t end_procs = PPN(PADDR(0x80045a4000));
+	// cprintf("end_procs: %p\n", end_procs);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -367,7 +367,7 @@ void x64_vm_init(void)
 	 * 1.第一个是 [UPAGES, UPAGES + size of pages[])映射到页表存储的物理地址 [pages, pages + size of pages[]) 0xff000=1020KB
 	 *   这里的PTSIZE代表页式内存管理所占用的空间(不包括4级页表)
 	 * 
-	 * 2.第二个是 [UENVS, UENVS + size of envs[])映射到envs数组存储的物理地址 [envs, envs + size of envs[]) 0x48000=120KB
+	 * 2.第二个是 [UENVS, UENVS + size of procs[])映射到procs数组存储的物理地址 [procs, procs + size of procs[]) 0x48000=120KB
 	 *   这里的PTSIZE代表页式内存管理所占用的空间(不包括4级页表)
 	 * 
 	 * 3.第三个是 [KSTACKTOP-KSTKSIZE, KSTACKTOP) 映射到[bootstack, bootstack+64KB) 64KB
@@ -386,16 +386,16 @@ void x64_vm_init(void)
 	// cprintf("pg_size: %p\n", pg_size);
 
 	//////////////////////////////////////////////////////////////////////
-	// [UENVS, sizeof(envs)] => [envs, sizeof(envs)]
-	// 将 UENV 所指向的虚拟地址开始 的空间(权限：用户只读)映射到 envs 数组的首地址，所以物理页帧权限被标记为PTE_U
-	// 与 pages 数组一样，envs 也将在 地址空间UENVS 中映射用户只读的内存，以便于用户环境能够从这个数组中读取
+	// [UENVS, sizeof(procs)] => [procs, sizeof(procs)]
+	// 将 UENV 所指向的虚拟地址开始 的空间(权限：用户只读)映射到 procs 数组的首地址，所以物理页帧权限被标记为PTE_U
+	// 与 pages 数组一样，procs 也将在 地址空间UENVS 中映射用户只读的内存，以便于用户环境能够从这个数组中读取
 	// 权限: 内核 R-，用户 R-
 	size_t env_size = ROUNDUP(NENV * (sizeof(struct Env)), PGSIZE);
-	boot_map_region(boot_pml4e, UENVS, env_size, PADDR(envs), PTE_U | PTE_P);
+	boot_map_region(boot_pml4e, UENVS, env_size, PADDR(procs), PTE_U | PTE_P);
 	// cprintf("env_size: %p\n", env_size);
-	// 注意，pages和envs本身作为内核代码的数组，拥有自己的虚拟地址，且内核可对其进行读写
+	// 注意，pages和procs本身作为内核代码的数组，拥有自己的虚拟地址，且内核可对其进行读写
 	// boot_map_region函数将两个数组分别映射到了UPAGES和UENVS起 4M空间的虚拟地址，这相当于另外的映射镜像，
-	// 4级页表项权限被设为用户/内核只可读，因此通过UPAGES和UENVS的虚拟地址去访问pages和envs的话，只能读不能写
+	// 4级页表项权限被设为用户/内核只可读，因此通过UPAGES和UENVS的虚拟地址去访问pages和procs的话，只能读不能写
 
 	//////////////////////////////////////////////////////////////////////
 	// [KSTACKTOP, KSTKSIZE) => [bootstack, KSTKSIZE), KSTKSIZE=16*PGSIZE
@@ -428,7 +428,7 @@ void x64_vm_init(void)
 	// pml4_virt: boot[0, 128MB], kernel[KERNBASE, KB+128MB]
 	// 将 cr3 寄存器存储的 pml4virt 临时4级页表切换到新创建的完整 boot_cr3 4级页表
 	// eip 指令指针现在位于[KERNBASE, KERNBASE+4MB]内（在执行内核代码），为了4级页表切换时 CPU 执行内核不产生冲突
-	// boot_cr3 在KERNBASE以上区间的映射包含了 pml4virt，且管理了pages, envs, kern_stack
+	// boot_cr3 在KERNBASE以上区间的映射包含了 pml4virt，且管理了pages, procs, kern_stack
 	// MMU 分页硬件在进行页式地址转换时会自动地从 CR3 中取得4级页表地址
 	lcr3(boot_cr3);
 	// cprintf("boot_cr3: %p\n",boot_cr3);
@@ -510,7 +510,7 @@ void page_init(void)
 	//    [end, end_debug]: 存放内核各段的 DWARF 调试信息
 	//    [PADDR(boot pml4), PADDR(boot pml4) + PGSIZE): 存放 pml4
 	//    [PADDR(pages[65280]), boot freemem): 存放 pages[], size:0xff000
-	//    [PADDR(envs[NENV]), boot freemem]: 存放 envs[], size:0x48000
+	//    [PADDR(procs[NENV]), boot freemem]: 存放 procs[], size:0x48000
 	// 	但是除了1、2项之外，后面的区域实际上是一段连续内存[IOPHYSMEM, boot freemem)，
 	//  所以实现时，用排除法(不在以上3种情况)，加入空闲页链表里
 	size_t i;
@@ -1035,7 +1035,7 @@ void user_mem_assert(struct Env *env, const void *va, size_t len, int perm)
 	if (user_mem_check(env, va, len, perm | PTE_U) < 0)
 	{
 		cprintf("[%08x] user_mem_check assertion failure for va %08x\n",
-				env->env_id, user_mem_check_addr);
+				env->proc_id, user_mem_check_addr);
 		// 不返回
 		env_destroy(env);
 	}
@@ -1222,10 +1222,10 @@ check_boot_pml4e(pml4e_t *pml4e)
 		assert(check_va2pa(pml4e, UPAGES + i) == PADDR(pages) + i);
 	}
 
-	// check envs array (new test for lab 3)
+	// check procs array (new test for lab 3)
 	n = ROUNDUP(NENV * sizeof(struct Env), PGSIZE);
 	for (i = 0; i < n; i += PGSIZE)
-		assert(check_va2pa(pml4e, UENVS + i) == PADDR(envs) + i);
+		assert(check_va2pa(pml4e, UENVS + i) == PADDR(procs) + i);
 
 	// check phys mem
 	for (i = 0; i < npages * PGSIZE; i += PGSIZE)

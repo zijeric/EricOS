@@ -1,25 +1,27 @@
-// Demonstrate lack of fairness in IPC.
-// Start three instances of this program as envs 1, 2, and 3.
+// 证明 IPC 缺乏公平性
+// 启动这个程序的三个实例，分别为procs 1、2和3
 // (user/idle is env 0).
 
 #include "inc/lib.h"
 
-void
-umain(int argc, char **argv)
+void umain(int argc, char **argv)
 {
-	envid_t who, id;
+	int32_t who, id;
 
-	id = sys_getenvid();
+	id = sys_getprocid();
 
-	if (thisenv == &envs[1]) {
-		while (1) {
+	if (thisproc == &procs[1])
+	{
+		while (1)
+		{
 			ipc_recv(&who, 0, 0);
 			cprintf("%x recv from %x\n", id, who);
 		}
-	} else {
-		cprintf("%x loop sending to %x\n", id, envs[1].env_id);
+	}
+	else
+	{
+		cprintf("%x loop sending to %x\n", id, procs[1].proc_id);
 		while (1)
-			ipc_send(envs[1].env_id, 0, 0, 0);
+			ipc_send(procs[1].proc_id, 0, 0, 0);
 	}
 }
-

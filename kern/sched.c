@@ -16,7 +16,7 @@ void sched_yield(void)
 {
 	/**
 	 * 实现简单的轮询调度算法.
-	 * CPU 在上次运行环境之后，在 envs[] 中以循环的方式搜索 ENV_RUNNABLE 环境，切换到找到的第一个环境.
+	 * CPU 在上次运行环境之后，在 procs[] 中以循环的方式搜索 ENV_RUNNABLE 环境，切换到找到的第一个环境.
 	 * 如果没有可运行的环境，但是以前在 CPU 上运行的环境仍然是 ENV_RUNNING，那么选择这个环境.
 	 * 不能选择当前正在另一个 CPU 上运行的环境(env_status == ENV_RUNNING)，如果没有可运行的环境，将会停止 CPU.
 	 */
@@ -27,7 +27,7 @@ void sched_yield(void)
 
 	// 获取上次运行环境的 id
 	if (idle)
-		i = ENVX(thiscpu->cpu_env->env_id);
+		i = ENVX(thiscpu->cpu_env->proc_id);
 
 	// 从上次运行环境的 id 开始，顺序循环搜索 ENV_RUNNABLE 环境
 	for (k = 0; k < NENV; k++)
@@ -35,9 +35,9 @@ void sched_yield(void)
 		// 如果以前没有运行环境，则从数组的开头开始
 		i = (i + 1) % NENV;
 		// 若找到则切换环境
-		if (envs[i].env_status == ENV_RUNNABLE)
+		if (procs[i].env_status == ENV_RUNNABLE)
 		{
-			env_run(&envs[i]);
+			env_run(&procs[i]);
 			return;
 		}
 	}
@@ -55,7 +55,6 @@ void sched_yield(void)
 
 // Halt this CPU when there is nothing to do. Wait until the
 // timer interrupt wakes it up. This function never returns.
-
 void sched_halt(void)
 {
 	int i;
@@ -64,14 +63,14 @@ void sched_halt(void)
 	// environments in the system, then drop into the kernel monitor.
 	for (i = 0; i < NENV; i++)
 	{
-		if ((envs[i].env_status == ENV_RUNNABLE ||
-			 envs[i].env_status == ENV_RUNNING ||
-			 envs[i].env_status == ENV_DYING))
+		if ((procs[i].env_status == ENV_RUNNABLE ||
+			 procs[i].env_status == ENV_RUNNING ||
+			 procs[i].env_status == ENV_DYING))
 			break;
 	}
 	if (i == NENV)
 	{
-		cprintf("No runnable environments in the system!\n");
+		cprintf("No runnable processes in the system!\n");
 		while (1)
 			monitor(NULL);
 	}

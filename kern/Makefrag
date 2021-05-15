@@ -43,31 +43,14 @@ KERN_SRCFILES +=	kern/mpentry.S \
 KERN_SRCFILES := $(wildcard $(KERN_SRCFILES))
 
 # 要嵌入内核的二进制程序映像.
-KERN_BINFILES :=	user/hello \
-			user/buggyhello \
-			user/buggyhello2 \
-			user/evilhello \
-			user/testbss \
-			user/divzero \
-			user/breakpoint \
-			user/softint \
-			user/badsegment \
-			user/faultread \
-			user/faultreadkernel \
-			user/faultwrite \
-			user/faultwritekernel
+KERN_BINFILES :=	user/testbss \
+			user/trap2bk \
+			user/loadDS \
 
 KERN_BINFILES +=	user/idle \
 			user/yield \
 			user/dumbfork \
 			user/stresssched \
-			user/faultdie \
-			user/faultregs \
-			user/faultalloc \
-			user/faultallocbad \
-			user/faultnostack \
-			user/faultbadhandler \
-			user/faultevilhandler \
 			user/forktree \
 			user/sendpage \
 			user/spin \
@@ -76,19 +59,6 @@ KERN_BINFILES +=	user/idle \
 			user/pingpongs \
 			user/primes
 
-KERN_BINFILES +=	user/testfilero \
-			user/spawnhello \
-			user/icode \
-			fs/fs
-
-KERN_BINFILES +=	user/testpteshare \
-			user/testfdsharing \
-			user/testpipe \
-			user/testpiperace \
-			user/testpiperace2 \
-			user/primespipe \
-			user/testkbd \
-			user/testshell
 
 KERN_OBJFILES := $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))
 KERN_OBJFILES := $(patsubst %.S, $(OBJDIR)/%.o, $(KERN_OBJFILES))
@@ -121,7 +91,10 @@ $(OBJDIR)/kern/%.o: lib/%.c $(OBJDIR)/.vars.KERN_CFLAGS
 $(OBJDIR)/kern/init.o: override KERN_CFLAGS+=$(INIT_CFLAGS)
 $(OBJDIR)/kern/init.o: $(OBJDIR)/.vars.INIT_CFLAGS
 
-# 表明如何 build 内核本身
+# 表明如何 build 内核
+# LD 表明如何链接内核的各部分
+# OBJDUMP 反汇编内核obj/kern/kernel.asm方便调试
+# NM 将内核所有的符号地址输出到obj/kern/kernel.sym文件
 $(OBJDIR)/kern/kernel: $(KERN_OBJFILES) $(KERN_BINFILES) kern/kernel.ld \
 	  $(OBJDIR)/.vars.KERN_LDFLAGS
 	@echo + ld $@

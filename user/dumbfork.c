@@ -1,71 +1,69 @@
-// Ping-pong a counter between two processes.
-// Only need to start one of these -- splits into two, crudely.
+// 在两个进程之间乒乓操作一个计数器
+// 只需要开始其中的一个——粗略地分成两个.
 
 #include "inc/string.h"
 #include "inc/lib.h"
 
-envid_t dumbfork(void);
+int32_t dumbfork(void);
 
-void
-umain(int argc, char **argv)
+void umain(int argc, char **argv)
 {
-	envid_t who;
+	int32_t who;
 	int i;
 
-	// fork a child process
+	// fork一个子进程
 	who = dumbfork();
 
 	// print a message and yield to the other a few times
-	for (i = 0; i < (who ? 10 : 20); i++) {
+	for (i = 0; i < (who ? 10 : 20); i++)
+	{
 		cprintf("%d: I am the %s!\n", i, who ? "parent" : "child");
 		sys_yield();
 	}
 }
 
-void
-duppage(envid_t dstenv, void *addr)
+void duppage(int32_t dstenv, void *addr)
 {
 	int r;
 
-	// This is NOT what you should do in your fork.
-	if ((r = sys_page_alloc(dstenv, addr, PTE_P|PTE_U|PTE_W)) < 0)
+	// 这不是fork应该做的事，只是为了测试.
+	if ((r = sys_page_alloc(dstenv, addr, PTE_P | PTE_U | PTE_W)) < 0)
 		panic("sys_page_alloc: %e", r);
-	if ((r = sys_page_map(dstenv, addr, 0, UTEMP, PTE_P|PTE_U|PTE_W)) < 0)
+	if ((r = sys_page_map(dstenv, addr, 0, UTEMP, PTE_P | PTE_U | PTE_W)) < 0)
 		panic("sys_page_map: %e", r);
 	memmove(UTEMP, addr, PGSIZE);
 	if ((r = sys_page_unmap(0, UTEMP)) < 0)
 		panic("sys_page_unmap: %e", r);
 }
 
-envid_t
+int32_t
 dumbfork(void)
 {
-	envid_t envid;
+	int32_t envid;
 	uint8_t *addr;
 	int r;
 	extern unsigned char end[];
 
-	// Allocate a new child environment.
-	// The kernel will initialize it with a copy of our register state,
-	// so that the child will appear to have called sys_exofork() too -
-	// except that in the child, this "fake" call to sys_exofork()
-	// will return 0 instead of the envid of the child.
+	// 分配一个新的子环境.
+	// 内核会用寄存器集的一个副本来初始化它，这样子进程就会看起来也调用了sys_exofork()
+	// 除了在子进程中，这个对sys_exofork()的“假”调用会返回0而不是孩子的envid.
 	envid = sys_exofork();
 	if (envid < 0)
-		panic("sys_exofork: %e", envid);
-	if (envid == 0) {
+		panic("S_alloc_proc: %e", envid);
+	if (envid == 0)
+	{
 		// We're the child.
-		// The copied value of the global variable 'thisenv'
+		// The copied value of the global variable 'thisproc'
 		// is no longer valid (it refers to the parent!).
 		// Fix it and return 0.
-		thisenv = &envs[ENVX(sys_getenvid())];
+		thisproc = &procs[ENVX(sys_getprocid())];
 		return 0;
 	}
 
 	// We're the parent.
 	// Eagerly copy our entire address space into the child.
 	// This is NOT what you should do in your fork implementation.
-	for (addr = (uint8_t*) UTEXT; addr < end; addr += PGSIZE)
+	for (addr = (uint8_t *)UTEXT; addr < end; addr += PGSIZE)
 		duppage(envid, addr);
 
 	// Also copy the stack we are currently running on.
@@ -77,4 +75,3 @@ dumbfork(void)
 
 	return envid;
 }
-
