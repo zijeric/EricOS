@@ -4,7 +4,7 @@
 // 2.Per-CPU TSS and TSS descriptor 寻址Per-CPU的内核栈
 // 3.Per-CPU current environment pointer 指向Per-CPU的当前环境
 // 4.Per-CPU Registers Per-CPU的所有寄存器私有(彼此隔离)，Per-CPU都要运行初始化特殊寄存器指令
-// 内核唯一：envs数组、pages数组、内核页目录
+// 内核唯一：procs数组、pages数组、内核页目录
 #ifndef ALVOS_INC_CPU_H
 #define ALVOS_INC_CPU_H
 

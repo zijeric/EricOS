@@ -99,7 +99,7 @@ duppage(envid_t envid, unsigned pn)
 }
 
 /**
- * 具有COW功能的用户级fork.
+ * 用户级fork.
  *  1.调用 set_pgfault_handler() 对 pgfault() 错误处理函数进行注册
  *  2.调用sys_exofork()创建一个新的子环境
  *  3.映射父环境的可写或者COW的页到子环境的页表中，并都标记为COW
@@ -123,8 +123,8 @@ fork(void)
 	}
 	if (childid == 0)
 	{
-		// thisenv 父进程
-		thisenv = &envs[ENVX(sys_getenvid())];
+		// thisproc 父进程
+		thisproc = &procs[ENVX(sys_getprocid())];
 		// 子环境的返回值
 		return 0;
 	}

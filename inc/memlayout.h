@@ -144,7 +144,7 @@
 #define UVPT    0x10000000000
 // pageInfo 结构 pages[] 的只读映射副本
 #define UPAGES		(ULIM - 25 * PTSIZE)
-// 全局 env 结构 envs[] 的只读映射副本
+// 全局 env 结构 procs[] 的只读映射副本
 #define UENVS (UPAGES - PTSIZE)
 
 /*

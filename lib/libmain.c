@@ -1,10 +1,10 @@
-// 从 lib/entry.S 调用并继续，entry.S 已经定义了 envs, pages, uvpd, uvpt.
+// 从 lib/entry.S 调用并继续，entry.S 已经定义了 procs, pages, uvpd, uvpt.
 
 #include "inc/lib.h"
 
 extern void umain(int argc, char **argv);
 
-const volatile struct Env *thisenv;
+const volatile struct Env *thisproc;
 const char *binaryname = "<unknown>";
 
 /**
@@ -12,9 +12,9 @@ const char *binaryname = "<unknown>";
  */
 void libmain(int argc, char **argv)
 {
-	// 设置常量 thisenv 指向 envs[] 中当前环境的 Env 结构，ENVX 确保环境 id 未超过了 NENV
-	// thisenv 指向当前环境的 Env 结构
-	thisenv = &envs[ENVX(sys_getenvid())];
+	// 设置常量 thisproc 指向 procs[] 中当前环境的 Env 结构，ENVX 确保环境 id 未超过了 NENV
+	// thisproc 指向当前环境的 Env 结构
+	thisproc = &procs[ENVX(sys_getprocid())];
 
 	// 为了能让panic()提示用户错误，存储程序的名称
 	if (argc > 0)

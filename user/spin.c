@@ -1,15 +1,15 @@
-// Test preemption by forking off a child process that just spins forever.
-// Let it run for a couple time slices, then kill it.
+// 通过fork一个永远自旋的子进程来测试抢占调度
+// 让它运行几个时间片后销毁它
 
 #include "inc/lib.h"
 
-void
-umain(int argc, char **argv)
+void umain(int argc, char **argv)
 {
-	envid_t env;
+	int32_t proc;
 
 	cprintf("I am the parent.  Forking the child...\n");
-	if ((env = fork()) == 0) {
+	if ((proc = fork()) == 0)
+	{
 		cprintf("I am the child.  Spinning...\n");
 		while (1)
 			/* do nothing */;
@@ -26,6 +26,5 @@ umain(int argc, char **argv)
 	sys_yield();
 
 	cprintf("I am the parent.  Killing the child...\n");
-	sys_env_destroy(env);
+	sys_env_destroy(proc);
 }
-

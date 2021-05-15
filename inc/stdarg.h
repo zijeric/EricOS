@@ -23,7 +23,7 @@ typedef __builtin_va_list va_list;
 // arg_ptr: 要被释放的指针
 #define va_end(arg_ptr) __builtin_va_end(arg_ptr)
 
-// va_copy 将
+// va_copy 将 src 的内容复制到 dst
 #define va_copy(dst, src) __builtin_va_copy(dst, src)
 
 #endif

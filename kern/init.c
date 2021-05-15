@@ -53,10 +53,10 @@ void i386_init(void)
 	end_debug = read_section_headers(KELFHDR, (uintptr_t)end);
 
 	/**
-	 * BSP 调用mem_init()，主要创建页目录、pages数组、envs数组、映射pages数组/envs数组/BSP内核栈等到4级页表中
+	 * BSP 调用mem_init()，主要创建页目录、pages数组、procs数组、映射pages数组/procs数组/BSP内核栈等到4级页表中
 	 * mem_init()	// 初始化内存管理
 	 * - i386_detect_memory()	// 通过 BIOS e820/调用硬件检测可以使用的内存大小
-	 * - boot_alloc()	// 页表映射尚未构建时的内存分配器 -> boot_pml4e, pages[](大小由探测决定), envs[](NENV)
+	 * - boot_alloc()	// 页表映射尚未构建时的内存分配器 -> boot_pml4e, pages[](大小由探测决定), procs[](NENV)
 	 * - page_init()	// 初始化 pages[] 中的物理页(避免映射已使用的物理内存)，建立 page_free_list 链表从而使用page分配器 page_alloc(), page_free()
 	 *   - boot_alloc(0)	// 获取内核后第一个空闲的物理地址空间(页对齐)
 	 * - boot_map_region()	// 更新参数页目录pgdir的页表页项pte，将线性地址[va, va+size]映射到物理地址[pa, pa+size](PPN + perm)
@@ -67,7 +67,7 @@ void i386_init(void)
 	 * 1.第一个是 [UPAGES, UPAGES + size of pages[])映射到页表存储的物理地址 [pages, pages + size of pages[]) 0xff000=1020KB
 	 *   这里的PTSIZE代表页式内存管理所占用的空间(不包括4级页表)
 	 * 
-	 * 2.第二个是 [UENVS, UENVS + size of envs[])映射到envs数组存储的物理地址 [envs, envs + size of envs[]) 0x48000=120KB
+	 * 2.第二个是 [UENVS, UENVS + size of procs[])映射到procs数组存储的物理地址 [procs, procs + size of procs[]) 0x48000=120KB
 	 *   这里的PTSIZE代表页式内存管理所占用的空间(不包括4级页表)
 	 * 
 	 * 3.第三个是 [KSTACKTOP-KSTKSIZE, KSTACKTOP) 映射到[bootstack, bootstack+64KB) 64KB
@@ -80,7 +80,7 @@ void i386_init(void)
 
 	/**
 	 * BSP 调用 env_init()，初始化env_free_list；同时调用 env_init_percpu() 加载当前cpu的 GDT 和 gs/fs/es/ds/ss 段描述符
-	 * env_init()			// 初始化用户环境(envs[NENV], env_free_list逆序地包含所有的env)
+	 * env_init()			// 初始化用户环境(procs[NENV], env_free_list逆序地包含所有的env)
 	 * - env_init_percpu()	// 加载可区分用户态、能处理int指令(TSS)的GDT，并初始化es, ds, ss(在用户态和内核态切换使用), cs(内核代码段)等寄存器
 	 */
 	env_init();
@@ -136,33 +136,24 @@ void i386_init(void)
 	 * obj/kern/kernel.sym 中链接器生成了一些符号(eg:_binary_obj_user_hello_start)
 	 * 这种符号为普通内核代码使用一种引入嵌入式二进制文件的方法
 	 * 
-	 * 这个宏相当于调用env_create(_binary_obj_user_..._start, ENV_TYPE_USER)
+	 * 这个宏相当于调用create_proc(_binary_obj_user_..._start, PROC_TYPE_USER)
 	 * 从而指定了在之后的 env_run 中要执行的环境，user/...的 umain 环境
 	 * 
 	 * 创建用户环境的过程
 	 * ENV_CREATE()
-	 * - env_create()		// 创建新的 env 并设置好内存映射，加载程序段，初始化运行时栈
+	 * - create_proc()		// 创建新的 env 并设置好内存映射，加载程序段，初始化运行时栈
 	 *   - env_alloc()		// 创建一个新的 env 并初始化结构中各个字段(eg:env_tf: cs,ds,es,ss,esp regs)
 	 *     - env_setup_vm()	// 为新的环境分配并设置页目录(映射内核的BIOS与内核代码数据段)，
 	 *   - load_icode()		// 根据程序文件头部加载数据段、代码段等
 	 *     - region_alloc()	// 为用户环境映射一页内存作为栈空间（USTACKTOP - PGSIZE）
 	 */
-	// Start fs.
-	ENV_CREATE(fs_fs, ENV_TYPE_FS);
-	// ENV_CREATE(user_faultwrite, ENV_TYPE_USER);
+	CREATE_PROC(user_testbss);
+	// CREATE_PROC(user_loadDS);
+	// CREATE_PROC(user_stresssched);
+	// CREATE_PROC(user_sendpage);
+	// CREATE_PROC(user_primes);
 
-#if defined(TEST)
-	// Don't touch -- used by grading script!
-	ENV_CREATE(TEST, ENV_TYPE_USER);
-#else
-	// Touch all you want.
-	ENV_CREATE(user_icode, ENV_TYPE_USER);
-#endif // TEST*
-
-	// Should not be necessary - drains keyboard because interrupt has given up.
 	kbd_intr();
-
-	// Schedule and run the first user environment!
 	// 在函数env_run调用env_pop_tf之后，处理器开始执行trapentry.S下的代码
 	// 应该首先跳转到TRAPENTRY_NOEC(divide_handler, T_DIVIDE)处，再经过_alltraps，进入trap函数
 
@@ -179,7 +170,7 @@ void i386_init(void)
 
 	// BSP上自行创建环境，并调用sched_yield()函数尝试开始执行可执行环境
 	// 只有当BSP激活所有APs并且开始调用sched_yield()运行用户程序时，其他CPU才可能开始执行用户环境
-	// 调度并运行第一个用户环境
+	// 调度并运行用户进程
 	sched_yield();
 }
 
@@ -310,12 +301,12 @@ void kernel_banner(){
 
 void p_init(){
 	// cprintf("正在引导内核...\n");
-	cprintf("正在打开A20地址总线...\n");asm volatile("pause");
-	cprintf("正在通过BIOS的0xE820号功能读取计算机的内存信息...\n");
-	cprintf("正在加载平坦地址模式的GDT...\n");
-	cprintf("正在进入保护模式...\n");
-	cprintf("准备jmpl长跳转刷新流水线指令，并切换为64-bit GDT...\n");
-	cprintf("设置段寄存器和临时栈...");
+	// cprintf("正在打开A20地址总线...\n");
+	// cprintf("正在通过BIOS的0xE820号功能读取计算机的内存信息...\n");
+	// cprintf("正在加载平坦地址模式的GDT...\n");
+	// cprintf("正在进入保护模式...\n");
+	// cprintf("准备jmpl长跳转刷新流水线指令，并切换为64-bit GDT...\n");
+	// cprintf("设置段寄存器和临时栈...");
 	// cprintf("")
 
 }

@@ -1,6 +1,6 @@
 // 在每个处理器中驱动 Local APIC 单元的内核代码
 // Local APIC 管理内部(非I/O)中断
-// See Chapter 8 & Appendix C of Intel processor manual volume 3.
+// 参考 Intel处理器手册卷3的 Chapter 8 & Appendix C .
 
 #include "inc/types.h"
 #include "inc/memlayout.h"
@@ -71,7 +71,7 @@ void lapic_init(void)
 	// TICR would be calibrated using an external time source.
 	lapicw(TDCR, X1);
 	lapicw(TIMER, PERIODIC | (IRQ_OFFSET + IRQ_TIMER));
-	lapicw(TICR, 10000000);
+	lapicw(TICR, 10000000);  // 10000000
 
 	// Leave LINT0 of the BSP enabled so that it can get
 	// interrupts from the 8259A chip.

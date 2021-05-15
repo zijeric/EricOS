@@ -73,7 +73,7 @@ int sys_env_destroy(envid_t envid)
 }
 
 envid_t
-sys_getenvid(void)
+sys_getprocid(void)
 {
 	// 获取当前用户环境id
 	return syscall(SYS_getenvid, 0, 0, 0, 0, 0, 0);

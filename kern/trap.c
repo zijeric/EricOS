@@ -154,21 +154,21 @@ void trap_init(void)
 	 * 		根据x86手册7.4，对于部分通过int指令触发的中断，只有在大于指定的权限状态下触发中断，才能进入中断入口函数
 	 * 		如在用户态下触发权限为0的T_DEBUG中断，就不能进入入口，反而会触发GPFLT中断。
 	 */
-	SETGATE(idt[T_DIVIDE], trap, GD_KT, ALV_DIVIDE, kern_dpl);
-	SETGATE(idt[T_DEBUG], trap, GD_KT, ALV_DEBUG, kern_dpl);
-	SETGATE(idt[T_NMI], trap, GD_KT, ALV_NMI, kern_dpl);
+	SETGATE(idt[T_DIVIDE], interrupt, GD_KT, ALV_DIVIDE, user_dpl);
+	SETGATE(idt[T_DEBUG], interrupt, GD_KT, ALV_DEBUG, kern_dpl);
+	SETGATE(idt[T_NMI], interrupt, GD_KT, ALV_NMI, kern_dpl);
 
 	// 为了让用户也可以使用断点(breakpoint)int 3，所以 dpl 为 user_dpl
 	SETGATE(idt[T_BRKPT], interrupt, GD_KT, ALV_BRKPT, user_dpl);
-	SETGATE(idt[T_OFLOW], trap, GD_KT, ALV_OFLOW, kern_dpl);
-	SETGATE(idt[T_BOUND], trap, GD_KT, ALV_BOUND, kern_dpl);
+	SETGATE(idt[T_OFLOW], interrupt, GD_KT, ALV_OFLOW, kern_dpl);
+	SETGATE(idt[T_BOUND], interrupt, GD_KT, ALV_BOUND, kern_dpl);
 	SETGATE(idt[T_ILLOP], interrupt, GD_KT, ALV_ILLOP, kern_dpl);
 	SETGATE(idt[T_DEVICE], trap, GD_KT, ALV_DEVICE, kern_dpl);
 	SETGATE(idt[T_DBLFLT], trap, GD_KT, ALV_DBLFLT, kern_dpl);
 	SETGATE(idt[T_TSS], trap, GD_KT, ALV_TSS, kern_dpl);
 	SETGATE(idt[T_SEGNP], trap, GD_KT, ALV_SEGNP, kern_dpl);
 	SETGATE(idt[T_STACK], trap, GD_KT, ALV_STACK, kern_dpl);
-	SETGATE(idt[T_GPFLT], trap, GD_KT, ALV_GPFLT, kern_dpl);
+	SETGATE(idt[T_GPFLT], interrupt, GD_KT, ALV_GPFLT, kern_dpl);
 
 	SETGATE(idt[T_PGFLT], interrupt, GD_KT, ALV_PGFLT, kern_dpl);
 	SETGATE(idt[T_FPERR], trap, GD_KT, ALV_FPERR, kern_dpl);
@@ -249,7 +249,7 @@ void print_trapframe(struct Trapframe *tf)
 	// 对于页错误，打印解码错误代码:
 	// U/K = 错误发生在用户态/内核态
 	// W/R = 读/写导致了故障
-	// PR = 违反保护导致故障 (NP = 页不存在).
+	// PR = 违反保护导致故障 (Not-Present = 页不存在).
 	if (tf->tf_trapno == T_PGFLT)
 		cprintf(" [%s, %s, %s]\n",
 				tf->tf_err & 4 ? "user" : "kernel",
@@ -273,21 +273,21 @@ void print_trapframe(struct Trapframe *tf)
  */
 void print_regs(struct PushRegs *regs)
 {
-	cprintf("  r15  0x%08x\n", regs->reg_r15);
+	cprintf("  r15  0x%08x", regs->reg_r15);
 	cprintf("  r14  0x%08x\n", regs->reg_r14);
-	cprintf("  r13  0x%08x\n", regs->reg_r13);
+	cprintf("  r13  0x%08x", regs->reg_r13);
 	cprintf("  r12  0x%08x\n", regs->reg_r12);
-	cprintf("  r11  0x%08x\n", regs->reg_r11);
+	cprintf("  r11  0x%08x", regs->reg_r11);
 	cprintf("  r10  0x%08x\n", regs->reg_r10);
-	cprintf("  r9  0x%08x\n", regs->reg_r9);
-	cprintf("  r8  0x%08x\n", regs->reg_r8);
-	cprintf("  rdi  0x%08x\n", regs->reg_rdi);
+	cprintf("  r9   0x%08x", regs->reg_r9);
+	cprintf("  r8   0x%08x\n", regs->reg_r8);
+	cprintf("  rdi  0x%08x", regs->reg_rdi);
 	cprintf("  rsi  0x%08x\n", regs->reg_rsi);
-	cprintf("  rbp  0x%08x\n", regs->reg_rbp);
+	cprintf("  rbp  0x%08x", regs->reg_rbp);
 	cprintf("  rbx  0x%08x\n", regs->reg_rbx);
-	cprintf("  rdx  0x%08x\n", regs->reg_rdx);
+	cprintf("  rdx  0x%08x", regs->reg_rdx);
 	cprintf("  rcx  0x%08x\n", regs->reg_rcx);
-	cprintf("  rax  0x%08x\n", regs->reg_rax);
+	cprintf("  rax  0x%08x", regs->reg_rax);
 }
 
 /**
@@ -511,8 +511,8 @@ void page_fault_handler(struct Trapframe *tf)
 	}
 
 	// 销毁导致错误的环境.
-	cprintf("envid: [%08x] user fault va: %08x rip: %08x\n",
-			curenv->env_id, fault_va, tf->tf_rip);
+	cprintf("pid: [%08x] user fault va: %08x rip: %08x\n",
+			curenv->proc_id, fault_va, tf->tf_rip);
 	print_trapframe(tf);
 	env_destroy(curenv);
 }

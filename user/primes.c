@@ -1,53 +1,50 @@
-// Concurrent version of prime sieve of Eratosthenes.
-// Invented by Doug McIlroy, inventor of Unix pipes.
-// See http://swtch.com/~rsc/thread/.
-// The picture halfway down the page and the text surrounding it
-// explain what's going on here.
+// 并发版的素数筛
+// 由 Unix 管道的发明者 Doug McIlroy 发明.
+// 参考 http://swtch.com/~rsc/thread/.
 //
-// Since NENVS is 1024, we can print 1022 primes before running out.
-// The remaining two environments are the integer generator at the bottom
-// of main and user/idle.
+// 因为 AlvOS 的最大进程数 NPROCS 为 1024，创建第1023个进程就会触发异常
+// 当前进程从父进程创建的管道读端读入所有的数，读到的第一个数必然是素数，输出
+// fork 子进程的继续接收，子进程将处理剩余的数
+// 父进程发送 除所有以第一个数为因子的和数 到子进程
 
 #include "inc/lib.h"
 
-unsigned
-primeproc(void)
+unsigned primeproc(void)
 {
 	int i, id, p;
-	envid_t envid;
+	int32_t procid;
 
-	// fetch a prime from our left neighbor
+	// 从左边的邻居那里取一个质数
 top:
-	p = ipc_recv(&envid, 0, 0);
-	cprintf("CPU %d: %d ", thisenv->env_cpunum, p);
+	p = ipc_recv(&procid, 0, 0);
+	cprintf("CPU %d: %d ", thisproc->env_cpunum, p);
 
-	// fork a right neighbor to continue the chain
+	// fork 一个右边的邻居来延续链条
 	if ((id = fork()) < 0)
 		panic("fork: %e", id);
 	if (id == 0)
 		goto top;
 
-	// filter out multiples of our prime
-	while (1) {
-		i = ipc_recv(&envid, 0, 0);
+	// 过滤掉质数的倍数
+	while (1)
+	{
+		i = ipc_recv(&procid, 0, 0);
 		if (i % p)
 			ipc_send(id, i, 0, 0);
 	}
 }
 
-void
-umain(int argc, char **argv)
+void umain(int argc, char **argv)
 {
 	int i, id;
 
-	// fork the first prime process in the chain
+	// fork 链中的第一个主要过程
 	if ((id = fork()) < 0)
 		panic("fork: %e", id);
-	if (id == 0)
+	if (id == 0) // 子进程
 		primeproc();
 
-	// feed all the integers through
-	for (i = 2; ; i++)
+	// 输入所有的整数
+	for (i = 2; i <= 1000; i++)
 		ipc_send(id, i, 0, 0);
 }
-

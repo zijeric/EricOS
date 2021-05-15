@@ -14,9 +14,6 @@
 #include "inc/memlayout.h"
 #include "inc/syscall.h"
 #include "inc/trap.h"
-#include "inc/fs.h"
-#include "inc/fd.h"
-#include "inc/args.h"
 
 #define USED(x) (void)(x)
 
@@ -25,8 +22,8 @@ void umain(int argc, char **argv);
 
 // libmain.c or entry.S
 extern const char *binaryname;
-extern const volatile struct Env *thisenv;
-extern const volatile struct Env envs[NENV];
+extern const volatile struct Env *thisproc;
+extern const volatile struct Env procs[NENV];
 extern const volatile struct PageInfo pages[];
 
 // exit.c
@@ -45,7 +42,7 @@ char *readline(const char *buf);
 
 void sys_cputs(const char *string, size_t len);
 int sys_cgetc(void);
-envid_t sys_getenvid(void);
+envid_t sys_getprocid(void);
 int sys_env_destroy(envid_t);
 void sys_yield(void);
 static envid_t sys_exofork(void);
@@ -80,60 +77,5 @@ envid_t ipc_find_env(enum EnvType type);
 
 #define PTE_SHARE 0x400
 envid_t fork(void);
-
-// fd.c
-
-int close(int fd);
-ssize_t read(int fd, void *buf, size_t nbytes);
-ssize_t write(int fd, const void *buf, size_t nbytes);
-int seek(int fd, off_t offset);
-void close_all(void);
-ssize_t readn(int fd, void *buf, size_t nbytes);
-int dup(int oldfd, int newfd);
-int fstat(int fd, struct Stat *statbuf);
-int stat(const char *path, struct Stat *statbuf);
-
-// file.c
-
-int open(const char *path, int mode);
-int ftruncate(int fd, off_t size);
-int remove(const char *path);
-int sync(void);
-
-// pageref.c
-
-int pageref(void *addr);
-
-// spawn.c
-
-envid_t spawn(const char *program, const char **argv);
-envid_t spawnl(const char *program, const char *arg0, ...);
-
-// console.c
-
-void cputchar(int c);
-int getchar(void);
-int iscons(int fd);
-int opencons(void);
-
-// pipe.c
-
-int pipe(int pipefds[2]);
-int pipeisclosed(int pipefd);
-
-// wait.c
-
-void wait(envid_t env);
-
-/* File open modes */
-#define O_RDONLY 0x0000	 /* open for reading only */
-#define O_WRONLY 0x0001	 /* open for writing only */
-#define O_RDWR 0x0002	 /* open for reading and writing */
-#define O_ACCMODE 0x0003 /* mask for above modes */
-
-#define O_CREAT 0x0100 /* create if nonexistent */
-#define O_TRUNC 0x0200 /* truncate to zero length */
-#define O_EXCL 0x0400  /* error if already exists */
-#define O_MKDIR 0x0800 /* create directory, not regular file */
 
 #endif

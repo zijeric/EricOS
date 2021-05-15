@@ -15,10 +15,10 @@
 #include "kern/cpu.h"
 #include "kern/spinlock.h"
 
-// 所有 Env 在内存（物理内存）中的存放是连续的，存放于 envs 处，可以通过数组的形式访问各个 Env
-// envs 指向 Env 数组的指针，其操作方式跟内存管理的 pages 类似
-// envs数组相当于Linux中的PCB(Process Control block)表
-struct Env *envs = NULL;
+// 所有 Env 在内存（物理内存）中的存放是连续的，存放于 procs 处，可以通过数组的形式访问各个 Env
+// procs 指向 Env 数组的指针，其操作方式跟内存管理的 pages 类似
+// procs数组相当于Linux中的PCB(Process Control block)表
+struct Env *procs = NULL;
 // env_free_list 是空闲的环境结构链表(静态的)，相当于 page_free_list
 // 简化环境的分配和释放，仅需要从该链表上添加或移除
 static struct Env *env_free_list;
@@ -83,10 +83,10 @@ int envid2env(envid_t envid, struct Env **env_store, bool checkperm)
 		return 0;
 	}
 
-	// 通过 envid 的索引部分查找环境结构，然后检查结构中的 env_id 字段，确保 envid 没有过时
-	// (不引用在 envs[] 中使用相同索引的上一个环境).
-	e = &envs[ENVX(envid)];
-	if (e->env_status == ENV_FREE || e->env_id != envid)
+	// 通过 envid 的索引部分查找环境结构，然后检查结构中的 proc_id 字段，确保 envid 没有过时
+	// (不引用在 procs[] 中使用相同索引的上一个环境).
+	e = &procs[ENVX(envid)];
+	if (e->env_status == ENV_FREE || e->proc_id != envid)
 	{
 		*env_store = 0;
 		return -E_BAD_ENV;
@@ -94,7 +94,7 @@ int envid2env(envid_t envid, struct Env **env_store, bool checkperm)
 
 	// 检查调用环境是否具有操作 envid 对应环境的权限.
 	// 如果(checkperm==1)，envid 对应环境必须是当前环境或当前环境的子环境.
-	if (checkperm && e != curenv && e->env_parent_id != curenv->env_id)
+	if (checkperm && e != curenv && e->env_parent_id != curenv->proc_id)
 	{
 		*env_store = 0;
 		return -E_BAD_ENV;
@@ -105,8 +105,8 @@ int envid2env(envid_t envid, struct Env **env_store, bool checkperm)
 }
 
 /**
- * 函数功能：初始化NENV个Env结构体(envs数组)，将它们加入到空闲环境链表(构建env_free_list)，
- * 注意，函数将结构体插入空闲环境链表时，以逆序的方式插入(高->低)，envs[0] 在链表头部
+ * 函数功能：初始化NENV个Env结构体(procs数组)，将它们加入到空闲环境链表(构建env_free_list)，
+ * 注意，函数将结构体插入空闲环境链表时，以逆序的方式插入(高->低)，procs[0] 在链表头部
  */
 void env_init(void)
 {
@@ -114,17 +114,17 @@ void env_init(void)
 	size_t i = 0;
 	for (; i < NENV; i++)
 	{
-		envs[i].env_type = ENV_FREE;
-		envs[i].env_id = 0;
+		procs[i].env_type = ENV_FREE;
+		procs[i].proc_id = 0;
 		if (env)
 		{
-			env->env_link = &envs[i];
+			env->env_link = &procs[i];
 		}
 		else
 		{
-			env_free_list = &envs[i];
+			env_free_list = &procs[i];
 		}
-		env = &envs[i];
+		env = &procs[i];
 	}
 	// Per-CPU part of the initialization
 	// 为了区分用户态环境和内核态的访问权限：加载全局描述符表(GDT)，配置分段硬件为权限级别0(内核)和权限级别3(用户)使用单独的段
@@ -151,16 +151,6 @@ void env_init_percpu(void)
 	lldt(0);
 }
 
-//
-// Initialize the kernel virtual memory layout for environment e.
-// Allocate a page map level 4, set e->env_pml4e accordingly,
-// and initialize the kernel portion of the new environment's address space.
-// Do NOT (yet) map anything into the user portion
-// of the environment's virtual address space.
-//
-// Returns 0 on success, < 0 on error.  Errors include:
-//	-E_NO_MEM if page directory or table could not be allocated.
-//
 static int
 env_setup_vm(struct Env *e)
 {
@@ -226,16 +216,16 @@ int env_alloc(struct Env **newenv_store, envid_t parent_id)
 	if ((r = env_setup_vm(e)) < 0)
 		return r;
 
-	// 为新环境生成env_id.
-	generation = (e->env_id + (1 << ENVGENSHIFT)) & ~(NENV - 1);
-	// 生成的env_id必须为正数
+	// 为新环境生成proc_id.
+	generation = (e->proc_id + (1 << ENVGENSHIFT)) & ~(NENV - 1);
+	// 生成的proc_id必须为正数
 	if (generation <= 0)
 		generation = 1 << ENVGENSHIFT;
-	e->env_id = generation | (e - envs);
+	e->proc_id = generation | (e - procs);
 
 	// 设置基础的状态变量：父id、环境类型、环境状态(就绪态)、运行次数
 	e->env_parent_id = parent_id;
-	e->env_type = ENV_TYPE_USER;
+	e->env_type = PROC_TYPE_USER;
 	e->env_status = ENV_RUNNABLE;
 	e->env_runs = 0;
 
@@ -268,7 +258,7 @@ int env_alloc(struct Env **newenv_store, envid_t parent_id)
 	env_free_list = e->env_link;
 	*newenv_store = e;
 
-	// cprintf("[%08x] new env %08x\n", curenv ? curenv->env_id : 0, e->env_id);
+	cprintf("[%08x] new proc %08x\n", curenv ? curenv->proc_id : 0, e->proc_id);
 	return 0;
 }
 
@@ -377,7 +367,7 @@ void load_icode(struct Env *e, uint8_t *binary)
 	// 这样才能根据设置好的cs与新的偏移量eip找到用户程序需要执行的代码
 	e->env_tf.tf_rip = env_elf->e_entry;
 	// 再在虚拟地址(USTACKTOP-PGSIZE)为环境映射一个 PGSIZE 大小的初始栈
-	region_alloc(e, (void *)(USTACKTOP - PGSIZE), PGSIZE);
+	region_alloc(e, (void *)(USTACKTOP - 2 * PGSIZE), 2 * PGSIZE);
 
 	// 在许多系统上，内核初始化分配一个栈页，然后如果程序发生的故障是去访问这个栈页下面的页，那么内核会自动分配这些页，并让程序继续运行
 	// 通过这种方式，内核只分配程序所需要的内存栈，但是程序可以运行在一个任意大小的栈的假像中
@@ -387,14 +377,14 @@ void load_icode(struct Env *e, uint8_t *binary)
 /**
  * 为参数binary创建用户环境虚拟地址空间，并且将其载入到相应的虚拟地址上
  * 参数：
- * binary: 用户环境所在地址(va), type: 用户环境类型，一般为 ENV_TYPE_USER
+ * binary: 用户环境所在地址(va), type: 用户环境类型，一般为 PROC_TYPE_USER
  * 函数功能：
  * 1.使用 env_alloc() 分配一个新的env
  * 2.设置好env_type
  * 3.这个函数只在内核初始化期间，即运行第一个用户态环境之前被调用 新 env->parent_id 设置为0
  * 4.并调用 load_icode() 将分配的新 env 加载到 binary
  */
-void env_create(uint8_t *binary, enum EnvType type)
+void create_proc(uint8_t *binary, enum EnvType type)
 {
 	struct Env *e;
 	// 1.分配一个新的 env 环境，即创建用户环境的地址空间4级页表
@@ -402,19 +392,12 @@ void env_create(uint8_t *binary, enum EnvType type)
 	// 处理分配环境的错误，分别是内存不足、环境分配已满(>1024)
 	if (r < 0)
 	{
-		panic("env_create: %e", r);
+		panic("create_proc: %e", r);
 	}
 	// 2.设置 env_type, env_parent_id
 	e->env_type = type;
 	// 4.将用户环境运行所需要的代码加载到用户环境的地址空间(参数binary)
 	load_icode(e, binary);
-
-	// x86处理器使用了EFLAGS的IOPL位来决定是否允许保护模式代码使用device I/O指令
-	// 根据 ENV_TYPE_FS 向文件系统进程给出相关的I/O权限
-	if (type == ENV_TYPE_FS)
-	{
-		e->env_tf.tf_eflags |= FL_IOPL_MASK;
-	}
 }
 
 /**
@@ -526,26 +509,26 @@ void env_pop_tf(struct Trapframe *tf)
 	curenv->env_cpunum = cpunum();
 
 	__asm __volatile(
-					 /* 占位符 %0 由"g"(tf)定义，代表参数tf，即Trapframe的指针地址 */
-					 /* 指令代表esp指向参数(Trapframe*)tf开始位置 */
-					 "movq %0,%%rsp\n"
-					 /* 将存储 struct PushRegs 的寄存器数值放回寄存器 */
-					 POPA
-					 /* 恢复 %es, %ds 段寄存器 */
-					 "movw (%%rsp),%%es\n"
-					 "movw 8(%%rsp),%%ds\n"
-					 "addq $16,%%rsp\n"
-					 /* 跳过 tf_trapno, tf_errcode */
-					 "\taddq $16,%%rsp\n"
-					 /* iret之后发生权限级的改变(即由内核态切换到用户态)，所以iret会依次弹出5个寄存器
+		/* 占位符 %0 由"g"(tf)定义，代表参数tf，即Trapframe的指针地址 */
+		/* 指令代表esp指向参数(Trapframe*)tf开始位置 */
+		"movq %0,%%rsp\n"
+		/* 将存储 struct PushRegs 的寄存器数值放回寄存器 */
+		POPA
+		/* 恢复 %es, %ds 段寄存器 */
+		"movw (%%rsp),%%es\n"
+		"movw 8(%%rsp),%%ds\n"
+		"addq $16,%%rsp\n"
+		/* 跳过 tf_trapno, tf_errcode */
+		"\taddq $16,%%rsp\n"
+		/* iret之后发生权限级的改变(即由内核态切换到用户态)，所以iret会依次弹出5个寄存器
 					 (rip、cs、rflags、rsp、ss) */
-					 "\tiretq"
-					 /* 这些寄存器在env_alloc(), load_icode()中都已赋值，iret后，rip就指向了程序的入口地址，
+		"\tiretq"
+		/* 这些寄存器在env_alloc(), load_icode()中都已赋值，iret后，rip就指向了程序的入口地址，
 					 cs也由内核代码段转向了用户代码段，rsp也由内核栈转到了用户栈 */
-					 :
-					 /* g 是通用传递约束(寄存器、内存、立即数)，此处表示使用内存 */
-					 : "g"(tf)
-					 : "memory");
+		:
+		/* g 是通用传递约束(寄存器、内存、立即数)，此处表示使用内存 */
+		: "g"(tf)
+		: "memory");
 	// 错误处理
 	panic("iret failed");
 }
