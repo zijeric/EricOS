@@ -39,7 +39,6 @@ void i386_init(void)
 
 	// 初始化控制台(包括显存的初始化、键盘的初始化).
 	cons_init();
-	p_init();
 
 	// AlvOS logo!
 	kernel_banner();
@@ -130,6 +129,7 @@ void i386_init(void)
 	 * BSP 仍在 boot_aps() 等待 AP 发送 CPU_STARTED 信号(CpuInfo 的 cpu_status)，然后激活下一个 CPU
 	 */
 	boot_aps();
+	kbd_intr();
 
 	/**
 	 * kern/Makefrag 中的-b binary 选项，把对应文件链接为不解析的二进制文件
@@ -147,30 +147,15 @@ void i386_init(void)
 	 *   - load_icode()		// 根据程序文件头部加载数据段、代码段等
 	 *     - region_alloc()	// 为用户环境映射一页内存作为栈空间（USTACKTOP - PGSIZE）
 	 */
-	CREATE_PROC(user_testbss);
-	// CREATE_PROC(user_loadDS);
-	// CREATE_PROC(user_stresssched);
-	// CREATE_PROC(user_sendpage);
-	// CREATE_PROC(user_primes);
+	CREATE_PROC(testbss);
+	// CREATE_PROC(loadDS);
+	// CREATE_PROC(stresssched);
+	// CREATE_PROC(sendpage);
+	// CREATE_PROC(primes);
 
-	kbd_intr();
-	// 在函数env_run调用env_pop_tf之后，处理器开始执行trapentry.S下的代码
-	// 应该首先跳转到TRAPENTRY_NOEC(divide_handler, T_DIVIDE)处，再经过_alltraps，进入trap函数
-
-	// 进入trap函数后，先判断是否由用户态进入内核态，若是，则必须保存环境状态
-	// 也就是将刚刚得到的TrapFrame存到对应环境结构体的属性中，之后要恢复环境运行，就是从这个TrapFrame进行恢复
-	// 若中断令处理器从内核态切换到内核态，则不做特殊处理(嵌套interrupt，无需切换栈)
-
-	// 接着调用分配函数trap_dispatch()，这个函数根据中断向量，调用相应的处理函数，并返回
-	// 故函数trap_dispatch返回之后，对中断的处理应当是已经完成了，该切换回触发中断的环境
-	// 修改函数trap_dispatch的代码时应注意，函数后部分(内核/环境存在bug)不应该执行，否则会销毁当前环境curenv
-	// 中断处理函数返回后，trap_dispatch应及时返回
-
-	// 切换回到旧环境，调用的是env_run，根据当前环境结构体curenv中包含和运行有关的信息，恢复环境执行
-
-	// BSP上自行创建环境，并调用sched_yield()函数尝试开始执行可执行环境
-	// 只有当BSP激活所有APs并且开始调用sched_yield()运行用户程序时，其他CPU才可能开始执行用户环境
-	// 调度并运行用户进程
+	// BSP上自行创建环境，并调用sched_yield()函数尝试开始执行就绪态进程
+	// 只有当BSP激活所有APs并且开始调用sched_yield()运行用户进程时，其他CPU才会开始执行用户进程
+	// 内核放弃调度，即调度用户进程
 	sched_yield();
 }
 
@@ -289,7 +274,7 @@ dead:
 }
 
 void kernel_banner(){
-	cprintf("	  _        ____   _____   _       _                 _ _            ______   \n");
+	cprintf("			  _        ____   _____   _       _                 _ _            ______   \n");
 	cprintf("	   ____     /\\   | |      / __ \\ / ____| (_)     | |               | (_)           \\ \\ \\ \\  \n");
 	cprintf("	  / __ \\   /  \\  | |_   _| |  | | (___    _ ___  | | ___   __ _  __| |_ _ __   __ _ \\ \\ \\ \\ \n");
 	cprintf("	 / / _` | / /\\ \\ | \\ \\ / / |  | |\\___ \\  | / __| | |/ _ \\ / _` |/ _` | | '_ \\ / _` | > > > >\n");
@@ -297,16 +282,4 @@ void kernel_banner(){
 	cprintf("	 \\ \\__,_/_/    \\_\\_| \\_/  \\____/|_____/  |_|___/ |_|\\___/ \\__,_|\\__,_|_|_| |_|\\__, /_/_/_/  \n");
 	cprintf("	  \\____/                                                                       __/ |        \n");
 	cprintf("	                                                                              |___/         \n");
-}
-
-void p_init(){
-	// cprintf("正在引导内核...\n");
-	// cprintf("正在打开A20地址总线...\n");
-	// cprintf("正在通过BIOS的0xE820号功能读取计算机的内存信息...\n");
-	// cprintf("正在加载平坦地址模式的GDT...\n");
-	// cprintf("正在进入保护模式...\n");
-	// cprintf("准备jmpl长跳转刷新流水线指令，并切换为64-bit GDT...\n");
-	// cprintf("设置段寄存器和临时栈...");
-	// cprintf("")
-
 }

@@ -1,4 +1,4 @@
-// 多处理器的压力调度，验证一个进程不能同时运行在两个处理器(fork、内核锁、进程调度)
+// 多处理器的压力调度，验证一个进程不能同时运行在多个处理器(fork、内核锁、进程调度)
 
 #include "inc/lib.h"  // 包含用户库
 
@@ -16,6 +16,7 @@ void umain(int argc, char **argv)
 			break;
 	if (i == 20)
 	{
+		cprintf("Children are computing...");
 		// 父进程 fork 完成后放弃调度
 		sys_yield();
 		return;
@@ -26,7 +27,7 @@ void umain(int argc, char **argv)
 		asm volatile("pause");
 
 	// 检查一个进程不能同时运行在两个处理器
-	for (i = 0; i < 10; i++)
+	for (i = 0; i < 1000; i++)
 	{
 		sys_yield();
 		for (j = 0; j < 10000; j++)
@@ -34,7 +35,7 @@ void umain(int argc, char **argv)
 	}
 
 	// 内核锁(互斥地系统调用): 如果进程运算的结果不等于循环自增的次数则说明进程同时运行在两个处理器
-	if (counter != 10 * 10000)
+	if (counter != 1000 * 10000)
 		panic("ran on two CPUs at once (counter is %d)", counter);
 
 	// 检查进程运算结果

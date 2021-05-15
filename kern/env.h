@@ -29,8 +29,8 @@ void env_pop_tf(struct Trapframe *tf) __attribute__((noreturn));
 #define CREATE_PROC(x)                                   \
 	do                                                        \
 	{                                                         \
-		extern uint8_t PROC_PASTE3(_binary_obj_, x, _start)[]; \
-		create_proc(PROC_PASTE3(_binary_obj_, x, _start),       \
+		extern uint8_t PROC_PASTE3(_binary_obj_user_, x, _start)[]; \
+		create_proc(PROC_PASTE3(_binary_obj_user_, x, _start),       \
 				   PROC_TYPE_USER);                                     \
 	} while (0)
 
